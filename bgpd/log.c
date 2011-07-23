@@ -16,6 +16,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* for asprintf() and others */
+#ifdef __GLIBC__
+#define _GNU_SOURCE 1
+#endif
+
 #include <err.h>
 #include <errno.h>
 #include <netdb.h>

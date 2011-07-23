@@ -20,6 +20,10 @@
  */
 
 %{
+#ifdef __GLIBC__
+#define _GNU_SOURCE 1
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -38,6 +42,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+
+#ifdef __GLIBC__
+#include <bsd/stdlib.h>
+#endif
 
 #include "bgpd.h"
 #include "mrt.h"

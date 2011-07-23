@@ -43,6 +43,10 @@
 #include <ctype.h>
 #include <limits.h>
 
+#ifdef __GLIBC__
+#include <bsd/string.h>
+#endif
+
 #include "util.h"
 
 typedef enum {

@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __GLIBC__
+#include <time.h>
+#endif
+
 #include "bgpd.h"
 #include "rde.h"
 

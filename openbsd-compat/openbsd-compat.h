@@ -7,6 +7,32 @@
 
 #define	__dead
 
+/* for asprintf() and others */
+#ifdef __GLIBC__
+#define _GNU_SOURCE 1
+#endif
+
+/* setproctitle() and others from libbsd */
+#ifdef __GLIBC__
+#include <bsd/unistd.h>
+#endif /* __GLIBC__ */
+
+/* strlcpy() */
+#ifdef __GLIBC__
+#include <bsd/string.h>
+#endif
+
+/* for setgroups() */
+#ifdef __GLIBC__
+#define _BSD_SOURCE 1
+#include <grp.h>
+#endif
+
+/* for poll() */
+#ifdef __GLIBC__
+#define INFTIM ((int) -1)
+#endif
+
 /* bgpctl/bgpctl.c */
 #include <sys/endian.h>
 #define betoh64(x)	(be64toh(x))
@@ -20,6 +46,7 @@ typedef unsigned long	ulong;
 #endif
 #define RTA_LABEL	0
 
+#if defined(__FreeBSD__) /* not GNU/kFreeBSD */
 #define SIMPLEQ_FOREACH         STAILQ_FOREACH
 #define SIMPLEQ_FIRST           STAILQ_FIRST
 #define SIMPLEQ_REMOVE_HEAD     STAILQ_REMOVE_HEAD
@@ -28,6 +55,7 @@ typedef unsigned long	ulong;
 #define SIMPLEQ_HEAD            STAILQ_HEAD
 #define SIMPLEQ_INIT            STAILQ_INIT
 #define SIMPLEQ_HEAD_INITIALIZER	STAILQ_HEAD_INITIALIZER
+#endif
 
 /* Routing priorities used by the different routing protocols */
 #define RTP_NONE        0       /* unset priority use sane default */

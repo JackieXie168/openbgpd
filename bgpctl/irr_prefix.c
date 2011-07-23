@@ -28,6 +28,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef __GLIBC__
+#include <bsd/stdlib.h>
+#endif
+
 #include "irrfilter.h"
 #include "bgpd.h"
 

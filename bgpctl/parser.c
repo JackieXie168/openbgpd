@@ -32,6 +32,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef __GLIBC__
+#include <bsd/stdlib.h>
+#include <bsd/unistd.h>
+#endif
+
 #include "parser.h"
 #include "irrfilter.h"
 

@@ -28,6 +28,7 @@
 #ifndef _SYS_HASH_H_
 #define	_SYS_HASH_H_
 #include <sys/types.h>
+#include <sys/endian.h>
 
 /*
  * Note: SMALL_KERNEL might be used to shrink these, right now I

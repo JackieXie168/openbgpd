@@ -25,6 +25,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef __GLIBC__
+#include <bsd/stdlib.h>
+#endif
+
 #include "irrfilter.h"
 
 #define PARSEBUF_INCREMENT 4096

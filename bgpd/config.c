@@ -33,6 +33,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef __GLIBC__
+#include <bsd/stdlib.h>
+#endif
+
 #include "bgpd.h"
 #include "session.h"
 
