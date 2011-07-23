@@ -16,19 +16,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#if defined(__FreeBSD__)	/* compat */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
 #include "openbsd-compat.h"
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <net/if.h>
-#if defined(__FreeBSD__)	/* net/if_media.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* net/if_media.h */
 #include "if_media.h"
 #else
 #include <net/if_media.h>
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 #include <net/if_types.h>
 
 #include <err.h>
@@ -37,11 +37,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#if defined(__FreeBSD__)	/* util.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* util.h */
 #include "util.h"
 #else
 #include <util.h>
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include "bgpd.h"
 #include "session.h"
@@ -50,9 +50,9 @@
 #include "parser.h"
 #include "irrfilter.h"
 
-#if defined(__FreeBSD__) /* FreeBSD has no LINK_STATE_IS_UP macro. */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no LINK_STATE_IS_UP macro. */
 #define LINK_STATE_IS_UP(_s)  ((_s) >= LINK_STATE_UP)
-#endif /* defined(__FreeBSD__) */ 
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */ 
 
 enum neighbor_views {
 	NV_DEFAULT,

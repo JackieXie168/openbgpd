@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
+#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
 #include <netmpls/mpls.h>
 #endif
 	

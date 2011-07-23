@@ -104,7 +104,7 @@ carp_demote_shutdown(void)
 int
 carp_demote_get(char *group)
 {
-#if defined(__FreeBSD__)	/* FreeBSD does not have support for CARP */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* FreeBSD does not have support for CARP */
 	return (-1);
 #else
 	int			s;
@@ -129,7 +129,7 @@ carp_demote_get(char *group)
 
 	close(s);
 	return ((int)ifgr.ifgr_attrib.ifg_carp_demoted);
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 }
 
 int
@@ -162,7 +162,7 @@ carp_demote_set(char *group, int demote)
 int
 carp_demote_ioctl(char *group, int demote)
 {
-#if defined(__FreeBSD__)	/* FreeBSD does not have support for CARP */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* FreeBSD does not have support for CARP */
 	return (-1);
 #else
 	int			s, res;
@@ -187,5 +187,5 @@ carp_demote_ioctl(char *group, int demote)
 
 	close(s);
 	return (res);
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 }

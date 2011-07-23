@@ -55,9 +55,9 @@
 #define PFD_SOCK_PFKEY		5
 #define PFD_LISTENERS_START	6
 
-#if defined(__FreeBSD__) /* FreeBSD has no LINK_STATE_IS_UP macro. */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no LINK_STATE_IS_UP macro. */
 #define LINK_STATE_IS_UP(_s)  ((_s) >= LINK_STATE_UP)
-#endif /* defined(__FreeBSD__) */ 
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */ 
 
 void	session_sighdlr(int);
 int	setup_listeners(u_int *);
@@ -390,7 +390,7 @@ session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
 		pfd[PFD_SOCK_RCTL].fd = rcsock;
 		pfd[PFD_SOCK_RCTL].events = POLLIN;
 		pfd[PFD_SOCK_PFKEY].fd = pfkeysock;
-#if !defined(__FreeBSD__)
+#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))
 		pfd[PFD_SOCK_PFKEY].events = POLLIN;
 #else
 		pfd[PFD_SOCK_PFKEY].events = 0;

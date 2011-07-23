@@ -17,18 +17,18 @@
  */
 #include <sys/types.h>
 #include <sys/queue.h>
-#if defined(__FreeBSD__)	/* sys/hash.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/hash.h */
 #include "hash.h"
 #else
 #include <sys/hash.h>
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(__FreeBSD__)	/* limits.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* limits.h */
 #include <limits.h>
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include "bgpd.h"
 #include "rde.h"

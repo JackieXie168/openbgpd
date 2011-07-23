@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(__FreeBSD__)	/* limits.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* limits.h */
 #include <limits.h>
 #endif
 

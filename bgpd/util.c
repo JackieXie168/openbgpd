@@ -18,9 +18,9 @@
  */
 #include <sys/types.h>
 #include <sys/socket.h>
-#if defined(__FreeBSD__)	/* sys/limits.h */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/limits.h */
 #include <sys/limits.h>
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>

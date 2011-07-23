@@ -16,9 +16,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#if defined(__FreeBSD__)        /* compat */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))        /* compat */
 #include "openbsd-compat.h"
-#endif /* defined(__FreeBSD__) */
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include <sys/types.h>
 #include <sys/socket.h>
