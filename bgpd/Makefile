@@ -8,7 +8,7 @@ SRCS=	bgpd.c session.c log.c parse.y config.c \
 	control.c ../openbsd-compat/pfkey_compat.c rde_update.c rde_attr.c printconf.c \
 	rde_filter.c pftable.c name2id.c util.c carp.c timer.c \
 	../openbsd-compat/imsg.c ../openbsd-compat/imsg-buffer.c
-CFLAGS+= -Wall -I$(CURDIR)
+CFLAGS+= -Wall -Werror -I$(CURDIR)
 CFLAGS+= -I$(CURDIR)/../openbsd-compat
 CFLAGS+= -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS+= -Wmissing-declarations
