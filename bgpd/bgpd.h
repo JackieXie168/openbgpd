@@ -41,7 +41,7 @@
 #ifndef CONFFILE
 #define	CONFFILE			"/etc/bgpd.conf"
 #endif /* !CONFFILE */
-#define	BGPD_USER			"_bgpd"
+#define	BGPD_USER			"bgpd"
 #define	PEER_DESCR_LEN			32
 #define	PFTABLE_LEN			16
 #define	TCP_MD5_KEY_LEN			80
