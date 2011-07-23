@@ -1,4 +1,4 @@
-/*	$OpenBSD: parser.h,v 1.19 2009/06/06 06:05:41 claudio Exp $ */
+/*	$OpenBSD: parser.h,v 1.22 2010/05/03 13:11:41 claudio Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -29,6 +29,7 @@ enum actions {
 	SHOW_NEIGHBOR_TIMERS,
 	SHOW_NEIGHBOR_TERSE,
 	SHOW_FIB,
+	SHOW_FIB_TABLES,
 	SHOW_RIB,
 	SHOW_RIB_MEM,
 	SHOW_NEXTHOP,
@@ -37,6 +38,8 @@ enum actions {
 	FIB,
 	FIB_COUPLE,
 	FIB_DECOUPLE,
+	LOG_VERBOSE,
+	LOG_BRIEF,
 	NEIGHBOR,
 	NEIGHBOR_UP,
 	NEIGHBOR_DOWN,
@@ -59,9 +62,10 @@ struct parse_result {
 	char			 rib[PEER_DESCR_LEN];
 	char			*irr_outdir;
 	int			 flags;
-	enum actions		action;
+	u_int			 rtableid;
+	enum actions		 action;
 	u_int8_t		 prefixlen;
-	sa_family_t		 af;
+	u_int8_t		 aid;
 };
 
 __dead void		 usage(void);
