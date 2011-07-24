@@ -12,7 +12,7 @@ CFLAGS+= -Wall -Werror -I$(CURDIR)
 CFLAGS+= -I$(CURDIR)/../openbsd-compat
 CFLAGS+= -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS+= -Wmissing-declarations
-CFLAGS+= -Wshadow -Wpointer-arith -Wcast-qual
+CFLAGS+= -Wpointer-arith -Wcast-qual
 CFLAGS+= -Wsign-compare
 CFLAGS+= -DCONFFILE=\"${CONFFILE}\"
 
