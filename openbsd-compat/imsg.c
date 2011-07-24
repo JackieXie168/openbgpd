@@ -77,7 +77,7 @@ imsg_read(struct imsgbuf *ibuf)
 	    cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == SOL_SOCKET &&
 		    cmsg->cmsg_type == SCM_RIGHTS) {
-			fd = (*(int *)CMSG_DATA(cmsg));
+			memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
 			if ((ifd = calloc(1, sizeof(struct imsg_fd))) == NULL) {
 				close(fd);
 				return (-1);
