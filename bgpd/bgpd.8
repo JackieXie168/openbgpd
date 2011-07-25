@@ -41,20 +41,6 @@ uses the Border Gateway Protocol, Version 4,
 as described in RFC 4271.
 Please refer to that document for more information about BGP.
 .Pp
-.Nm
-is usually started at boot time, and can be enabled by
-setting the following in
-.Pa /etc/rc.conf :
-.Pp
-.Dl openbgpd_enable=\&"YES\&"
-.Pp
-See
-.Xr rc 8
-and
-.Xr rc.conf 8
-for more information on the boot process
-and enabling daemons.
-.Pp
 When
 .Nm
 starts up, it reads settings from a configuration file,
@@ -113,7 +99,7 @@ Use
 .Ar file
 as the configuration file,
 instead of the default
-.Pa %%PREFIX%%/etc/bgpd.conf .
+.Pa /etc/bgpd.conf .
 .It Fl n
 Configtest mode.
 Only check the configuration file for validity.
@@ -122,7 +108,7 @@ Produce more verbose output.
 .El
 .Sh FILES
 .Bl -tag -width "/var/run/bgpd.sockXXX" -compact
-.It Pa %%PREFIX%%/etc/bgpd.conf
+.It Pa /etc/bgpd.conf
 default
 .Nm
 configuration file
@@ -134,8 +120,6 @@ control socket
 .Sh SEE ALSO
 .Xr bgpd.conf 5 ,
 .Xr bgpctl 8 ,
-.Xr bgplg 8 ,
-.Xr bgplgsh 8
 .Rs
 .%R RFC 4271
 .%T "A Border Gateway Protocol 4 (BGP-4)"

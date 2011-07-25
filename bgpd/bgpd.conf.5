@@ -811,11 +811,11 @@ is responsible for managing the session keys.
 With
 .Xr isakmpd 8 ,
 it is sufficient to copy the peer's public key, found in
-.Pa %%PREFIX%%/etc/isakmpd/private/local.pub ,
+.Pa /etc/isakmpd/private/local.pub ,
 to the local machine.
 It must be stored in a file
 named after the peer's IP address and must be stored in
-.Pa %%PREFIX%%/etc/isakmpd/pubkeys/ipv4/ .
+.Pa /etc/isakmpd/pubkeys/ipv4/ .
 The local public key must be copied to the peer in the same way.
 As
 .Xr bgpd 8
@@ -1461,8 +1461,8 @@ For prefixes with equally long paths, the prefix with the larger weight
 is selected.
 .El
 .Sh FILES
-.Bl -tag -width "%%PREFIX%%/etc/bgpd.conf" -compact
-.It Pa %%PREFIX%%/etc/bgpd.conf
+.Bl -tag -width "/etc/bgpd.conf" -compact
+.It Pa /etc/bgpd.conf
 .Xr bgpd 8
 configuration file
 .El
@@ -1475,7 +1475,6 @@ configuration file
 .Xr bgpd 8 ,
 .Xr ipsecctl 8 ,
 .Xr isakmpd 8 ,
-.Xr rc.conf.local 8
 .Sh HISTORY
 The
 .Nm
