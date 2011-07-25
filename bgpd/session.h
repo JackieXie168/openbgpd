@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <bsd/libutil.h>
 
 #define	MAX_BACKLOG			5
 #define	INTERVAL_CONNECTRETRY		120
@@ -234,7 +235,7 @@ struct ctl_timer {
 
 /* session.c */
 void		 session_socket_blockmode(int, enum blockmodes);
-pid_t		 session_main(int[2], int[2], int[2], int[2]);
+pid_t		 session_main(int[2], int[2], int[2], int[2], struct pidfh *);
 void		 bgp_fsm(struct peer *, enum session_events);
 int		 session_neighbor_rrefresh(struct peer *p);
 struct peer	*getpeerbyaddr(struct bgpd_addr *);
@@ -263,7 +264,7 @@ void	 prepare_listeners(struct bgpd_config *);
 int	 get_mpe_label(struct rdomain *);
 
 /* rde.c */
-pid_t	 rde_main(int[2], int[2], int[2], int[2], int);
+pid_t	 rde_main(int[2], int[2], int[2], int[2], int, struct pidfh *);
 
 /* control.c */
 int	control_init(int, char *);

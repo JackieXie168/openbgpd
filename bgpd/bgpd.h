@@ -71,6 +71,7 @@
 #define	BGPD_LOG_UPDATES		0x0001
 
 #define	SOCKET_NAME			"/var/run/bgpd.sock"
+#define	PIDFILE_NAME			"/var/run/bgpd.pid"
 
 #define	F_BGPD_INSERTED		0x0001
 #define	F_KERNEL		0x0002

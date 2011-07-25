@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <bsd/libutil.h>
 
 #include "bgpd.h"
 #include "mrt.h"
@@ -160,7 +161,7 @@ u_int32_t	nexthophashsize = 64;
 
 pid_t
 rde_main(int pipe_m2r[2], int pipe_s2r[2], int pipe_m2s[2], int pipe_s2rctl[2],
-    int debug)
+    int debug, struct pidfh *pfh)
 {
 	struct rlimit		 rl;
 	pid_t			 pid;
@@ -176,6 +177,7 @@ rde_main(int pipe_m2r[2], int pipe_s2r[2], int pipe_m2s[2], int pipe_s2rctl[2],
 	case -1:
 		fatal("cannot fork");
 	case 0:
+		pidfile_close(pfh);
 		break;
 	default:
 		return (pid);

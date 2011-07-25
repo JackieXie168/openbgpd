@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <bsd/libutil.h>
 
 #include "bgpd.h"
 #include "mrt.h"
@@ -111,6 +112,7 @@ main(int argc, char *argv[])
 	struct listen_addr	*la;
 	struct pollfd		 pfd[POLL_MAX];
 	pid_t			 io_pid = 0, rde_pid = 0, pid;
+	struct pidfh		*pfh;
 	char			*conffile;
 	int			 debug = 0;
 	int			 ch, timeout, nfds;
@@ -187,10 +189,26 @@ main(int argc, char *argv[])
 	if (getpwnam(BGPD_USER) == NULL)
 		errx(1, "unknown user %s", BGPD_USER);
 
+	pfh = pidfile_open(PIDFILE_NAME, 0600, &pid);
+	if (pfh == NULL) {
+		if (errno == EEXIST) {
+			errx(1, "daemon already running, pid: %jd",
+			     (intmax_t) pid);
+		}
+		warn("Cannot open or create pidfile");
+	}
+
 	log_init(debug);
 
-	if (!debug)
-		daemon(1, 0);
+	if (!debug) {
+		if (daemon(1, 0) == -1) {
+			warn("Cannot daemonize");
+			pidfile_remove(pfh);
+			exit(1);
+		}
+	}
+
+	pidfile_write(pfh);
 
 	log_info("startup");
 
@@ -212,8 +230,8 @@ main(int argc, char *argv[])
 	session_socket_blockmode(pipe_s2r_c[1], BM_NONBLOCK);
 
 	/* fork children */
-	rde_pid = rde_main(pipe_m2r, pipe_s2r, pipe_m2s, pipe_s2r_c, debug);
-	io_pid = session_main(pipe_m2s, pipe_s2r, pipe_m2r, pipe_s2r_c);
+	rde_pid = rde_main(pipe_m2r, pipe_s2r, pipe_m2s, pipe_s2r_c, debug, pfh);
+	io_pid = session_main(pipe_m2s, pipe_s2r, pipe_m2r, pipe_s2r_c, pfh);
 
 	setproctitle("parent");
 
@@ -375,6 +393,8 @@ main(int argc, char *argv[])
 	free(ibuf_rde);
 	free(rcname);
 	free(cname);
+
+	pidfile_remove(pfh);
 
 	log_info("Terminating");
 	return (0);

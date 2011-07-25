@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <bsd/libutil.h>
 
 #include "bgpd.h"
 #include "mrt.h"
@@ -186,7 +187,7 @@ setup_listeners(u_int *la_cnt)
 
 pid_t
 session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
-    int pipe_s2rctl[2])
+    int pipe_s2rctl[2], struct pidfh *pfh)
 {
 	struct rlimit		 rl;
 	int			 nfds, timeout, pfkeysock;
@@ -209,6 +210,7 @@ session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
 	case -1:
 		fatal("cannot fork");
 	case 0:
+		pidfile_close(pfh);
 		break;
 	default:
 		return (pid);
