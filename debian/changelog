@@ -1,5 +1,5 @@
-openbgpd (4.6-freebsd4.9.20110612+1) UNRELEASED; urgency=low
+openbgpd (4.6-1) unstable; urgency=low
 
-  * Initial release. (Closes: #635283)
+  * Initial release, FreeBSD port version 4.9.20110612. (Closes: #635283)
 
- -- Jérémy Bobbio <lunar@debian.org>  Sun, 24 Jul 2011 21:06:37 +0200
+ -- Jérémy Bobbio <lunar@debian.org>  Mon, 25 Jul 2011 18:57:11 +0200
