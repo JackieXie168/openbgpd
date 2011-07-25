@@ -1,0 +1,4 @@
+version=3
+
+http://ftp.openbsd.org/pub/OpenBSD/OpenBGPD/ \
+	openbgpd-([\d.]+)\.tgz

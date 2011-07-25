@@ -4,3 +4,8 @@ DEB_BUILD_HARDENING = 1
 
 %:
 	dh $@
+
+watch:
+	uscan --report
+	uscan --report --watchfile debian/custom-watch \
+		--upstream-version $$(sed -n -e 's/^0001-Import-FreeBSD-port-patches-\([0-9.]\+\)\.patch$$/\1/p' debian/patches/series) || true

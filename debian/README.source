@@ -14,6 +14,19 @@ at: http://www.eyrie.org/~eagle/notes/debian/git.html
   * patch-queue/*: branches exported to quilt patches (handled by gbp-pq)
   * master: export of patch-queue/* branches and Debian specific changes
 
+Custom watch file
+=================
+
+Upstream is actually the FreeBSD port more than official OpenBGPD
+releases. So the FreeBSD port version is encoded in the Debian package revision.
+Unfortunately, `uscan` cannot work directly on Debian package revision, so we
+ship our own custom watch file, and a `watch` target in `debian/rules`.
+
+To sum it up: to figure out if a newer FreeBSD port is available, run the
+following:
+
+    $ debian/rules watch
+
 Getting the FreeBSD port
 ========================
 

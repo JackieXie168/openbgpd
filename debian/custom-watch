@@ -1,0 +1,4 @@
+version=3
+
+http://ftp.freebsd.org/pub/FreeBSD/ports/i386/packages-current/net/ \
+	openbgpd-([\d.]+)_\d.tbz
