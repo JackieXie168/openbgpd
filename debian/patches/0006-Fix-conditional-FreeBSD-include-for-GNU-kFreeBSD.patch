@@ -1,0 +1,626 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sat, 23 Jul 2011 17:41:05 +0200
+Subject: [PATCH] Fix conditional FreeBSD include for GNU/kFreeBSD
+
+---
+ bgpctl/bgpctl.c    |   16 ++++++------
+ bgpctl/irrfilter.c |    4 +-
+ bgpctl/irrfilter.h |    4 +-
+ bgpctl/parser.c    |    4 +-
+ bgpd/bgpd.h        |    4 +-
+ bgpd/carp.c        |    8 +++---
+ bgpd/config.c      |    4 +-
+ bgpd/kroute.c      |   70 ++++++++++++++++++++++++++--------------------------
+ bgpd/parse.y       |    2 +-
+ bgpd/printconf.c   |    2 +-
+ bgpd/rde_attr.c    |    8 +++---
+ bgpd/rde_rib.c     |    4 +-
+ bgpd/rde_update.c  |    8 +++---
+ bgpd/session.c     |    6 ++--
+ bgpd/util.c        |    4 +-
+ 15 files changed, 74 insertions(+), 74 deletions(-)
+
+diff --git a/bgpctl/bgpctl.c b/bgpctl/bgpctl.c
+index c684295..531a57e 100644
+--- a/bgpctl/bgpctl.c
++++ b/bgpctl/bgpctl.c
+@@ -16,19 +16,19 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-#if defined(__FreeBSD__)	/* compat */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
+ #include "openbsd-compat.h"
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <sys/un.h>
+ #include <net/if.h>
+-#if defined(__FreeBSD__)	/* net/if_media.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* net/if_media.h */
+ #include "if_media.h"
+ #else
+ #include <net/if_media.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ #include <net/if_types.h>
+ 
+ #include <err.h>
+@@ -37,11 +37,11 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
+-#if defined(__FreeBSD__)	/* util.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* util.h */
+ #include "util.h"
+ #else
+ #include <util.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include "bgpd.h"
+ #include "session.h"
+@@ -50,9 +50,9 @@
+ #include "parser.h"
+ #include "irrfilter.h"
+ 
+-#if defined(__FreeBSD__) /* FreeBSD has no LINK_STATE_IS_UP macro. */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no LINK_STATE_IS_UP macro. */
+ #define LINK_STATE_IS_UP(_s)  ((_s) >= LINK_STATE_UP)
+-#endif /* defined(__FreeBSD__) */ 
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */ 
+ 
+ enum neighbor_views {
+ 	NV_DEFAULT,
+diff --git a/bgpctl/irrfilter.c b/bgpctl/irrfilter.c
+index e731554..9abd1b3 100644
+--- a/bgpctl/irrfilter.c
++++ b/bgpctl/irrfilter.c
+@@ -15,9 +15,9 @@
+  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+-#if defined(__FreeBSD__)	/* compat */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
+ #include "openbsd-compat.h"
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <sys/types.h>
+ #include <sys/param.h>
+diff --git a/bgpctl/irrfilter.h b/bgpctl/irrfilter.h
+index 9def255..d78f24a 100644
+--- a/bgpctl/irrfilter.h
++++ b/bgpctl/irrfilter.h
+@@ -16,9 +16,9 @@
+  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-#if defined(__FreeBSD__)	/* compat */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
+ #include "openbsd-compat.h"
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <sys/queue.h>
+ #include <sys/tree.h>
+diff --git a/bgpctl/parser.c b/bgpctl/parser.c
+index 4416f71..24a8c59 100644
+--- a/bgpctl/parser.c
++++ b/bgpctl/parser.c
+@@ -16,9 +16,9 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-#if defined(__FreeBSD__)        /* compat */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))        /* compat */
+ #include "openbsd-compat.h"
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <sys/types.h>
+ #include <sys/socket.h>
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index c0a3841..eed7c3f 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -31,9 +31,9 @@
+ #include <poll.h>
+ #include <stdarg.h>
+ 
+-#if defined(__FreeBSD__)	/* compat */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
+ #include "openbsd-compat.h"
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ #include "imsg.h"
+ 
+ #define	BGP_VERSION			4
+diff --git a/bgpd/carp.c b/bgpd/carp.c
+index aa25e46..7d9767b 100644
+--- a/bgpd/carp.c
++++ b/bgpd/carp.c
+@@ -104,7 +104,7 @@ carp_demote_shutdown(void)
+ int
+ carp_demote_get(char *group)
+ {
+-#if defined(__FreeBSD__)	/* FreeBSD does not have support for CARP */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* FreeBSD does not have support for CARP */
+ 	return (-1);
+ #else
+ 	int			s;
+@@ -129,7 +129,7 @@ carp_demote_get(char *group)
+ 
+ 	close(s);
+ 	return ((int)ifgr.ifgr_attrib.ifg_carp_demoted);
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ }
+ 
+ int
+@@ -162,7 +162,7 @@ carp_demote_set(char *group, int demote)
+ int
+ carp_demote_ioctl(char *group, int demote)
+ {
+-#if defined(__FreeBSD__)	/* FreeBSD does not have support for CARP */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* FreeBSD does not have support for CARP */
+ 	return (-1);
+ #else
+ 	int			s, res;
+@@ -187,5 +187,5 @@ carp_demote_ioctl(char *group, int demote)
+ 
+ 	close(s);
+ 	return (res);
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ }
+diff --git a/bgpd/config.c b/bgpd/config.c
+index 51e3096..9079d10 100644
+--- a/bgpd/config.c
++++ b/bgpd/config.c
+@@ -22,7 +22,7 @@
+ #include <sys/mman.h>
+ #include <sys/ioctl.h>
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
+ #include <netmpls/mpls.h>
+ #endif
+ 
+@@ -321,7 +321,7 @@ prepare_listeners(struct bgpd_config *conf)
+ int
+ get_mpe_label(struct rdomain *r)
+ {
+-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
+ 	struct  ifreq	ifr;
+ 	struct shim_hdr	shim;
+ 	int		s;
+diff --git a/bgpd/kroute.c b/bgpd/kroute.c
+index db8c8d4..6d1943f 100644
+--- a/bgpd/kroute.c
++++ b/bgpd/kroute.c
+@@ -27,7 +27,7 @@
+ #include <net/if.h>
+ #include <net/if_dl.h>
+ #include <net/route.h>
+-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
+ #include <netmpls/mpls.h>
+ #endif
+ #include <err.h>
+@@ -195,7 +195,7 @@ int
+ kr_init(void)
+ {
+ 	int		opt = 0, rcvbuf, default_rcvbuf;
+-#if !defined(__FreeBSD__) /* FreeBSD does not have ROUTE_TABLEFILTER. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD does not have ROUTE_TABLEFILTER. */
+ 	unsigned int	tid = RTABLE_ANY;
+ #endif
+ 	socklen_t	optlen;
+@@ -223,7 +223,7 @@ kr_init(void)
+ 		    rcvbuf /= 2)
+ 			;	/* nothing */
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD does not have ROUTE_TABLEFILTER. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD does not have ROUTE_TABLEFILTER. */
+ 	if (setsockopt(kr_state.fd, AF_ROUTE, ROUTE_TABLEFILTER, &tid,
+ 	    sizeof(tid)) == -1) {
+ 		log_warn("kr_init: setsockopt AF_ROUTE ROUTE_TABLEFILTER");
+@@ -432,7 +432,7 @@ ktable_postload(void)
+ int
+ ktable_exists(u_int rtableid, u_int *rdomid)
+ {
+-#if !defined(__FreeBSD__) /* FreeBSD does not have NET_RT_TABLE. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD does not have NET_RT_TABLE. */
+ 	size_t			 len;
+ 	struct rt_tableinfo	 info;
+ 	int			 mib[6];
+@@ -2566,10 +2566,10 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute)
+ 		struct sockaddr_dl	dl;
+ 		char			pad[sizeof(long)];
+ 	}			ifp;
+-#if !defined(__FreeBSD__) /* FreeBSD has no route labeling. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no route labeling. */
+ 	struct sockaddr_mpls	mpls;
+ 	struct sockaddr_rtlabel	label;
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 	int			iovcnt = 0;
+ 
+ 	if (!kt->fib_sync)
+@@ -2579,14 +2579,14 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute)
+ 	bzero(&hdr, sizeof(hdr));
+ 	hdr.rtm_version = RTM_VERSION;
+ 	hdr.rtm_type = action;
+-#if !defined(__FreeBSD__) /* XXX: FreeBSD has no multiple routing tables */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* XXX: FreeBSD has no multiple routing tables */
+ 	hdr.rtm_tableid = kt->rtableid;
+-#endif /* !defined(__FreeBSD__) */
+-#if !defined(__FreeBSD__) /* XXX: FreeBSD has no rtm_priority */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* XXX: FreeBSD has no rtm_priority */
+ 	hdr.rtm_priority = RTP_BGP;
+ #else
+ 	hdr.rtm_flags = RTF_PROTO1;
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 	if (kroute->flags & F_BLACKHOLE)
+ 		hdr.rtm_flags |= RTF_BLACKHOLE;
+ 	if (kroute->flags & F_REJECT)
+@@ -2648,7 +2648,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute)
+ 		iov[iovcnt++].iov_len = ROUNDUP(sizeof(struct sockaddr_dl));
+ 	}
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
+ 	if (kroute->flags & F_MPLS) {
+ 		bzero(&mpls, sizeof(mpls));
+ 		mpls.smpls_len = sizeof(mpls);
+@@ -2665,7 +2665,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute)
+ 	}
+ #endif
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no route labeling. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no route labeling. */
+ 	if (kroute->labelid) {
+ 		bzero(&label, sizeof(label));
+ 		label.sr_len = sizeof(label);
+@@ -2678,7 +2678,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute)
+ 		iov[iovcnt].iov_base = &label;
+ 		iov[iovcnt++].iov_len = sizeof(label);
+ 	}
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ retry:
+ 	if (writev(fd, iov, iovcnt) == -1) {
+@@ -2710,9 +2710,9 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute)
+ 		struct sockaddr_in6	addr;
+ 		char			pad[sizeof(long)];
+ 	} prefix, nexthop, mask;
+-#if !defined(__FreeBSD__) /* FreeBSD has no route labeling. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no route labeling. */
+ 	struct sockaddr_rtlabel	label;
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 	int			iovcnt = 0;
+ 
+ 	if (!kt->fib_sync)
+@@ -2722,11 +2722,11 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute)
+ 	bzero(&hdr, sizeof(hdr));
+ 	hdr.rtm_version = RTM_VERSION;
+ 	hdr.rtm_type = action;
+-#if !defined(__FreeBSD__) /* XXX: FreeBSD has no multiple routing tables */ 
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* XXX: FreeBSD has no multiple routing tables */ 
+ 	hdr.rtm_tableid = kr_state.rtableid;
+ #else
+ 	hdr.rtm_flags = RTF_PROTO1;
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 	if (kroute->flags & F_BLACKHOLE)
+ 		hdr.rtm_flags |= RTF_BLACKHOLE;
+ 	if (kroute->flags & F_REJECT)
+@@ -2779,7 +2779,7 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute)
+ 	iov[iovcnt].iov_base = &mask;
+ 	iov[iovcnt++].iov_len = ROUNDUP(sizeof(struct sockaddr_in6));
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no route labeling. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no route labeling. */
+ 	if (kroute->labelid) {
+ 		bzero(&label, sizeof(label));
+ 		label.sr_len = sizeof(label);
+@@ -2792,7 +2792,7 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute)
+ 		iov[iovcnt].iov_base = &label;
+ 		iov[iovcnt++].iov_len = sizeof(label);
+ 	}
+-#endif /* !defined(__FreeBSD__) */
++#endif /* !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ retry:
+ 	if (writev(fd, iov, iovcnt) == -1) {
+@@ -2819,7 +2819,7 @@ int
+ fetchtable(struct ktable *kt)
+ {
+ 	size_t			 len;
+-#if !defined(__FreeBSD__) /* FreeBSD has no table id. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no table id. */
+ 	int			 mib[7];
+ #else
+ 	int			mib[6];
+@@ -2838,11 +2838,11 @@ fetchtable(struct ktable *kt)
+ 	mib[3] = 0;
+ 	mib[4] = NET_RT_DUMP;
+ 	mib[5] = 0;
+-#if !defined(__FreeBSD__) /* FreeBSD has no table id. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no table id. */
+ 	mib[6] = kt->rtableid;
+ #endif
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no table id. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no table id. */
+ 	if (sysctl(mib, 7, NULL, &len, NULL, 0) == -1) {
+ #else
+ 	if (sysctl(mib, 6, NULL, &len, NULL, 0) == -1) {
+@@ -2858,7 +2858,7 @@ fetchtable(struct ktable *kt)
+ 			log_warn("fetchtable");
+ 			return (-1);
+ 		}
+-#if !defined(__FreeBSD__) /* FreeBSD has no table id. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no table id. */
+ 		if (sysctl(mib, 7, buf, &len, NULL, 0) == -1) {
+ #else
+ 		if (sysctl(mib, 6, buf, &len, NULL, 0) == -1) {
+@@ -2874,7 +2874,7 @@ fetchtable(struct ktable *kt)
+ 		rtm = (struct rt_msghdr *)next;
+ 		if (rtm->rtm_version != RTM_VERSION)
+ 			continue;
+-#if !defined(__FreeBSD__)
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))
+ 		sa = (struct sockaddr *)(next + rtm->rtm_hdrlen);
+ #else
+ 		sa = (struct sockaddr *)(next + sizeof(struct rt_msghdr));
+@@ -2897,7 +2897,7 @@ fetchtable(struct ktable *kt)
+ 			}
+ 
+ 			kr->r.flags = F_KERNEL;
+-#if defined(__FreeBSD__)	/* no rtm_priority on FreeBSD */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* no rtm_priority on FreeBSD */
+ 			kr->r.priority = RTP_BGP;
+ #else
+ 			kr->r.priority = rtm->rtm_priority;
+@@ -2921,7 +2921,7 @@ fetchtable(struct ktable *kt)
+ 				    mask2prefixlen(sa_in->sin_addr.s_addr);
+ 			} else if (rtm->rtm_flags & RTF_HOST) {
+ 				kr->r.prefixlen = 32;
+-#if defined(__FreeBSD__)	/* RTF_HOST means connected route */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* RTF_HOST means connected route */
+ 				kr->r.flags |= F_CONNECTED;
+ #endif
+ 			}
+@@ -2938,7 +2938,7 @@ fetchtable(struct ktable *kt)
+ 			}
+ 
+ 			kr6->r.flags = F_KERNEL;
+-#if defined(__FreeBSD__)	/* no rtm_priority on FreeBSD */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* no rtm_priority on FreeBSD */
+ 			kr6->r.priority = RTP_BGP;
+ #else
+ 			kr6->r.priority = rtm->rtm_priority;
+@@ -2963,7 +2963,7 @@ fetchtable(struct ktable *kt)
+ 				kr6->r.prefixlen = mask2prefixlen6(sa_in6);
+ 			} else if (rtm->rtm_flags & RTF_HOST) {
+ 				kr6->r.prefixlen = 128;
+-#if defined(__FreeBSD__)	/* RTF_HOST means connected route */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* RTF_HOST means connected route */
+ 				kr6->r.flags |= F_CONNECTED;
+ #endif
+ 			}
+@@ -2998,7 +2998,7 @@ fetchtable(struct ktable *kt)
+ 			}
+ 
+ 		if (sa->sa_family == AF_INET) {
+-#if !defined(__FreeBSD__)	/* no rtm_priority on FreeBSD */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* no rtm_priority on FreeBSD */
+ 			if (rtm->rtm_priority == RTP_BGP)  {
+ #else
+ 			/* never delete route */
+@@ -3009,7 +3009,7 @@ fetchtable(struct ktable *kt)
+ 			} else
+ 				kroute_insert(kt, kr);
+ 		} else if (sa->sa_family == AF_INET6) {
+-#if !defined(__FreeBSD__)	/* no rtm_priority on FreeBSD */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* no rtm_priority on FreeBSD */
+ 			if (rtm->rtm_priority == RTP_BGP)  {
+ #else
+ 			/* never delete route */
+@@ -3131,7 +3131,7 @@ dispatch_rtmsg(void)
+ 		case RTM_ADD:
+ 		case RTM_CHANGE:
+ 		case RTM_DELETE:
+-#if !defined(__FreeBSD__)
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))
+ 			sa = (struct sockaddr *)(next + rtm->rtm_hdrlen);
+ #else
+ 			sa = (struct sockaddr *)(next + sizeof(struct rt_msghdr));
+@@ -3147,7 +3147,7 @@ dispatch_rtmsg(void)
+ 			if (rtm->rtm_flags & RTF_LLINFO) /* arp cache */
+ 				continue;
+ 
+-#if !defined(__FreeBSD__) /* FreeBSD has no rtm_tableid. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no rtm_tableid. */
+ 			if ((kt = ktable_get(rtm->rtm_tableid)) == NULL)
+ #else
+ 			if ((kt = ktable_get(0)) == NULL)
+@@ -3209,7 +3209,7 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
+ 		mpath = 1;
+ #endif
+ 
+-#if !defined(__FreeBSD__)	/* no rtm_priority on FreeBSD */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* no rtm_priority on FreeBSD */
+ 	prio = rtm->rtm_priority;
+ #else
+ 	prio = RTP_BGP;
+@@ -3225,7 +3225,7 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
+ 				    sa_in->sin_addr.s_addr);
+ 		} else if (rtm->rtm_flags & RTF_HOST) {
+ 			prefixlen = 32;
+-#if defined(__FreeBSD__)	/* RTF_HOST means connected route */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* RTF_HOST means connected route */
+ 			flags |= F_CONNECTED;
+ #endif
+ 		}
+@@ -3243,7 +3243,7 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
+ 				prefixlen = mask2prefixlen6(sa_in6);
+ 		} else if (rtm->rtm_flags & RTF_HOST) {
+ 			prefixlen = 128;
+-#if defined(__FreeBSD__)	/* RTF_HOST means connected route */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* RTF_HOST means connected route */
+ 			flags |= F_CONNECTED;
+ #endif
+ 		}
+diff --git a/bgpd/parse.y b/bgpd/parse.y
+index d76ac6a..1b7df01 100644
+--- a/bgpd/parse.y
++++ b/bgpd/parse.y
+@@ -25,7 +25,7 @@
+ #include <sys/stat.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+-#if !defined(__FreeBSD__) /* FreeBSD has no mpls support. */
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no mpls support. */
+ #include <netmpls/mpls.h>
+ #endif
+ 	
+diff --git a/bgpd/printconf.c b/bgpd/printconf.c
+index 3086b88..5edbb6b 100644
+--- a/bgpd/printconf.c
++++ b/bgpd/printconf.c
+@@ -20,7 +20,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#if defined(__FreeBSD__)	/* limits.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* limits.h */
+ #include <limits.h>
+ #endif
+ 
+diff --git a/bgpd/rde_attr.c b/bgpd/rde_attr.c
+index eab471f..c8435a6 100644
+--- a/bgpd/rde_attr.c
++++ b/bgpd/rde_attr.c
+@@ -17,11 +17,11 @@
+  */
+ 
+ #include <sys/types.h>
+-#if defined(__FreeBSD__)	/* sys/hash.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/hash.h */
+ #include "hash.h"
+ #else
+ #include <sys/hash.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ #include <sys/queue.h>
+ 
+ #include <netinet/in.h>
+@@ -30,9 +30,9 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <string.h>
+-#if defined(__FreeBSD__)	/* limits.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* limits.h */
+ #include <limits.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include "bgpd.h"
+ #include "rde.h"
+diff --git a/bgpd/rde_rib.c b/bgpd/rde_rib.c
+index afc01c9..2eae07a 100644
+--- a/bgpd/rde_rib.c
++++ b/bgpd/rde_rib.c
+@@ -18,11 +18,11 @@
+ 
+ #include <sys/types.h>
+ #include <sys/queue.h>
+-#if defined(__FreeBSD__)	/* sys/hash.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/hash.h */
+ #include "hash.h"
+ #else
+ #include <sys/hash.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <stdlib.h>
+ #include <string.h>
+diff --git a/bgpd/rde_update.c b/bgpd/rde_update.c
+index f50223b..96b3bfc 100644
+--- a/bgpd/rde_update.c
++++ b/bgpd/rde_update.c
+@@ -17,18 +17,18 @@
+  */
+ #include <sys/types.h>
+ #include <sys/queue.h>
+-#if defined(__FreeBSD__)	/* sys/hash.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/hash.h */
+ #include "hash.h"
+ #else
+ #include <sys/hash.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include <limits.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#if defined(__FreeBSD__)	/* limits.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* limits.h */
+ #include <limits.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ 
+ #include "bgpd.h"
+ #include "rde.h"
+diff --git a/bgpd/session.c b/bgpd/session.c
+index 3cdafc8..b777a39 100644
+--- a/bgpd/session.c
++++ b/bgpd/session.c
+@@ -55,9 +55,9 @@
+ #define PFD_SOCK_PFKEY		5
+ #define PFD_LISTENERS_START	6
+ 
+-#if defined(__FreeBSD__) /* FreeBSD has no LINK_STATE_IS_UP macro. */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) /* FreeBSD has no LINK_STATE_IS_UP macro. */
+ #define LINK_STATE_IS_UP(_s)  ((_s) >= LINK_STATE_UP)
+-#endif /* defined(__FreeBSD__) */ 
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */ 
+ 
+ void	session_sighdlr(int);
+ int	setup_listeners(u_int *);
+@@ -390,7 +390,7 @@ session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
+ 		pfd[PFD_SOCK_RCTL].fd = rcsock;
+ 		pfd[PFD_SOCK_RCTL].events = POLLIN;
+ 		pfd[PFD_SOCK_PFKEY].fd = pfkeysock;
+-#if !defined(__FreeBSD__)
++#if !(defined(__FreeBSD__) || defined(__FreeBSD_kernel__))
+ 		pfd[PFD_SOCK_PFKEY].events = POLLIN;
+ #else
+ 		pfd[PFD_SOCK_PFKEY].events = 0;
+diff --git a/bgpd/util.c b/bgpd/util.c
+index c5a10ed..46987d2 100644
+--- a/bgpd/util.c
++++ b/bgpd/util.c
+@@ -18,9 +18,9 @@
+  */
+ #include <sys/types.h>
+ #include <sys/socket.h>
+-#if defined(__FreeBSD__)	/* sys/limits.h */
++#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* sys/limits.h */
+ #include <sys/limits.h>
+-#endif /* defined(__FreeBSD__) */
++#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ #include <netdb.h>
+-- 

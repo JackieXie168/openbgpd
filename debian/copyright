@@ -1,0 +1,197 @@
+Format: http://dep.debian.net/deps/dep5
+Upstream-Name: OpenBGPD
+Source: ftp://ftp.OpenBSD.org/pub/OpenBSD/OpenBGPD/
+
+Files: *
+Copyright: Copyright (c) 2003-2007 Henning Brauer <henning@openbsd.org>
+License: ISC
+
+Files: bgpd/bgpd.conf.5
+Copyright: Copyright (c) 2004 Claudio Jeker <claudio@openbsd.org>
+           Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+           Copyright (c) 2002 Daniel Hartmeier <dhartmei@openbsd.org>
+License: ISC
+
+Files: bgpd/mrt.[ch]
+Copyright: Copyright (c) 2003, 2004 Claudio Jeker <claudio@openbsd.org>
+License: ISC
+
+Files: bgpd/parse.y
+Copyright: Copyright (c) 2002, 2003, 2004 Henning Brauer <henning@openbsd.org>
+           Copyright (c) 2001 Markus Friedl
+           Copyright (c) 2001 Daniel Hartmeier
+           Copyright (c) 2001 Theo de Raadt
+License: ISC
+
+Files: bgpd/pfkey.c
+Copyright: Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+           Copyright (c) 2003, 2004 Markus Friedl <markus@openbsd.org>
+License: ISC
+
+Files: bgpd/pftable.c
+Copyright: Copyright (c) 2004 Damien Miller <djm@openbsd.org>
+License: ISC
+
+Files: bgpd/rde.h
+Copyright: Copyright (c) 2003, 2004 Claudio Jeker <claudio@openbsd.org>
+           Copyright (c) 2003, 2004 Andre Oppermann <oppermann@pipeline.ch>
+License: ISC
+
+Files: bgpd/rde_*.c
+Copyright: Copyright (c) 2003, 2004 Claudio Jeker <claudio@openbsd.org>
+License: ISC
+
+Files: bgpd/rde_decide.c
+Copyright: Copyright (c) 2003, 2004 Claudio Jeker <claudio@openbsd.org>
+           Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+License: ISC
+
+Files: bgpd/util.c
+Copyright: Copyright (c) 2006 Claudio Jeker <claudio@openbsd.org>
+           Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+License: ISC
+
+Files: debian/*
+Copyright: Copyright (c) 2011 Jérémy Bobbio <lunar@debian.org>
+License: ISC
+
+Files: openbsd-compat/fmt_scaled.c
+Copyright: Copyright (c) 2001, 2002, 2003 Ian F. Darwin
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. The name of the author may not be used to endorse or promote products
+    derived from this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Files: openbsd-compat/hash.h
+Copyright: Copyright (c) 2001 Tobias Weingartner
+License: BSD-2-clause
+
+Files: openbsd-compat/if_media.h
+Copyright: Copyright (c) 1997 Jonathan Stone and Jason R. Thorpe
+           Copyright (c) 1998, 2000 The NetBSD Foundation, Inc.
+License: BSD-4-clause
+ This code is derived from software contributed to The NetBSD Foundation
+ by Jason R. Thorpe of the Numerical Aerospace Simulation Facility,
+ NASA Ames Research Center.
+ .
+ This software is derived from information provided by Matt Thomas.
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. All advertising materials mentioning features or use of this software
+    must display the following acknowledgement:
+      This product includes software developed by the NetBSD
+      Foundation, Inc. and its contributors.
+      This product includes software developed by Jonathan Stone
+      and Jason R. Thorpe for the NetBSD Project.
+ 4. Neither the name of The NetBSD Foundation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+ ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+ BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
+
+Files: openbsd-compat/imsg.h
+Copyright: Copyright (c) 2006, 2007 Pierre-Yves Ritschard <pyr@openbsd.org>
+           Copyright (c) 2006, 2007, 2008 Reyk Floeter <reyk@openbsd.org>
+           Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+License: ISC
+
+Files: openbsd-compat/imsg*.c
+Copyright: Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+License: ISC
+
+Files: openbsd-compat/util.h
+Copyright: Copyright (c) 1995 The Regents of the University of California
+           Copyright (c) 1996, Jason Downs.
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the University nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
+
+License: ISC
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

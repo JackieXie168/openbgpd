@@ -1,0 +1,49 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sun, 24 Jul 2011 23:22:02 +0200
+Subject: [PATCH] Do not discard qualifiers from pointer in hash32_stre() and hash32_strne()
+
+---
+ openbsd-compat/hash.h |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/openbsd-compat/hash.h b/openbsd-compat/hash.h
+index 2f0283f..4f57deb 100644
+--- a/openbsd-compat/hash.h
++++ b/openbsd-compat/hash.h
+@@ -93,7 +93,7 @@ hash32_strn(const void *buf, size_t len, uint32_t hash)
+  * namei() hashing of path name parts.
+  */
+ static __inline uint32_t
+-hash32_stre(const void *buf, int end, char **ep, uint32_t hash)
++hash32_stre(const void *buf, int end, const char **ep, uint32_t hash)
+ {
+ 	const unsigned char *p = buf;
+ 
+@@ -101,7 +101,7 @@ hash32_stre(const void *buf, int end, char **ep, uint32_t hash)
+ 		hash = HASHSTEP(hash, *p++);
+ 
+ 	if (ep)
+-		*ep = (char *)p;
++		*ep = (const char *)p;
+ 
+ 	return hash;
+ }
+@@ -112,7 +112,7 @@ hash32_stre(const void *buf, int end, char **ep, uint32_t hash)
+  * as a helper for the namei() hashing of path name parts.
+  */
+ static __inline uint32_t
+-hash32_strne(const void *buf, size_t len, int end, char **ep, uint32_t hash)
++hash32_strne(const void *buf, size_t len, int end, const char **ep, uint32_t hash)
+ {
+ 	const unsigned char *p = buf;
+ 
+@@ -120,7 +120,7 @@ hash32_strne(const void *buf, size_t len, int end, char **ep, uint32_t hash)
+ 		hash = HASHSTEP(hash, *p++);
+ 
+ 	if (ep)
+-		*ep = (char *)p;
++		*ep = (const char *)p;
+ 
+ 	return hash;
+ }
+-- 

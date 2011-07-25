@@ -1,0 +1,151 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Mon, 25 Jul 2011 10:46:42 +0200
+Subject: [PATCH] Make Makefiles work out of a FreeBSD ports tree
+
+---
+ Makefile        |   20 +++++++++++++++++++-
+ Makefile.inc    |    5 -----
+ bgpctl/Makefile |   27 ++++++++++++++++++---------
+ bgpd/Makefile   |   36 +++++++++++++++++++++++++-----------
+ 4 files changed, 62 insertions(+), 26 deletions(-)
+ delete mode 100644 Makefile.inc
+
+diff --git a/Makefile b/Makefile
+index 520c1df..f9c01ca 100644
+--- a/Makefile
++++ b/Makefile
+@@ -2,4 +2,22 @@
+ 
+ SUBDIR=	bgpd bgpctl
+ 
+-.include <bsd.subdir.mk>
++all: $(SUBDIR)
++	set -e ; \
++	for subdir in $(SUBDIR); do \
++		make -C $$subdir; \
++	done
++
++clean: $(SUBDIR)
++	set -e ; \
++	for subdir in $(SUBDIR); do \
++		make -C $$subdir clean; \
++	done
++
++distclean: $(SUBDIR)
++	set -e ; \
++	for subdir in $(SUBDIR); do \
++		make -C $$subdir distclean; \
++	done
++
++.PHONY: all clean distclean
+diff --git a/Makefile.inc b/Makefile.inc
+deleted file mode 100644
+index efde290..0000000
+--- a/Makefile.inc
++++ /dev/null
+@@ -1,5 +0,0 @@
+-# $hrs: openbgpd/Makefile.inc,v 1.2 2009/06/30 07:19:13 hrs Exp $
+-
+-PREFIX?=	/usr/local
+-BINDIR?=	${PREFIX}/sbin
+-MANDIR?=	${PREFIX}/man/man
+diff --git a/bgpctl/Makefile b/bgpctl/Makefile
+index c6d3ec5..9ee43bb 100644
+--- a/bgpctl/Makefile
++++ b/bgpctl/Makefile
+@@ -1,20 +1,29 @@
+-#	$OpenBSD: Makefile,v 1.10 2007/12/20 17:08:48 henning Exp $
+-
+-.PATH:		${.CURDIR}/../bgpd ${.CURDIR}/../openbsd-compat
++CURDIR = .
+ 
+ PROG=	bgpctl
+-SRCS=	bgpctl.c parser.c util.c timer.c
++SRCS=	bgpctl.c parser.c ../bgpd/util.c ../bgpd/timer.c
+ SRCS+=	irrfilter.c whois.c irr_asset.c irr_prefix.c irr_output.c
+ SRCS+=	irr_parser.c
+-SRCS+=	fmt_scaled.c imsg.c imsg-buffer.c
++SRCS+=	../openbsd-compat/fmt_scaled.c ../openbsd-compat/imsg.c ../openbsd-compat/imsg-buffer.c
+ CFLAGS+= -Wall
+ CFLAGS+= -Wstrict-prototypes -Wmissing-prototypes
+ CFLAGS+= -Wmissing-declarations
+ CFLAGS+= -Wshadow -Wpointer-arith -Wcast-qual
+ CFLAGS+= -Wsign-compare
+-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../bgpd -I${.CURDIR}/../openbsd-compat
++CFLAGS+= -I$(CURDIR) -I$(CURDIR)/../bgpd -I$(CURDIR)/../openbsd-compat
+ MAN=	bgpctl.8
+-LDADD= -lutil
+-DPADD+= ${LIBUTIL}
++LDFLAGS= -lbsd -lrt
++
++CC = gcc
++
++OBJS = $(subst .c,.o,$(subst .y,.o,$(SRCS)))
++
++$(PROG): $(OBJS)
++
++clean:
++	rm -f $(OBJS)
++
++distclean: clean
++	rm -f $(PROG)
+ 
+-.include <bsd.prog.mk>
++.PHONY: distclean clean
+diff --git a/bgpd/Makefile b/bgpd/Makefile
+index adda69b..382be2d 100644
+--- a/bgpd/Makefile
++++ b/bgpd/Makefile
+@@ -1,26 +1,40 @@
+-#	$OpenBSD: Makefile,v 1.29 2010/05/26 16:44:32 nicm Exp $
++CURDIR = .
+ 
+-.PATH:		${.CURDIR}/.. ${.CURDIR}/../openbsd-compat
+-
+-CONFFILE?=	${PREFIX}/etc/bgpd.conf
++CONFFILE = /etc/bgpd.conf
+ 
+ PROG=	bgpd
+ SRCS=	bgpd.c session.c log.c parse.y config.c \
+ 	rde.c rde_rib.c rde_decide.c rde_prefix.c mrt.c kroute.c \
+-	control.c pfkey_compat.c rde_update.c rde_attr.c printconf.c \
++	control.c ../openbsd-compat/pfkey_compat.c rde_update.c rde_attr.c printconf.c \
+ 	rde_filter.c pftable.c name2id.c util.c carp.c timer.c \
+-	imsg.c imsg-buffer.c
+-CFLAGS+= -Wall -I${.CURDIR}
+-CFLAGS+= -I${.CURDIR}/../openbsd-compat
++	../openbsd-compat/imsg.c ../openbsd-compat/imsg-buffer.c
++CFLAGS+= -Wall -I$(CURDIR)
++CFLAGS+= -I$(CURDIR)/../openbsd-compat
+ CFLAGS+= -Wstrict-prototypes -Wmissing-prototypes
+ CFLAGS+= -Wmissing-declarations
+ CFLAGS+= -Wshadow -Wpointer-arith -Wcast-qual
+ CFLAGS+= -Wsign-compare
+ CFLAGS+= -DCONFFILE=\"${CONFFILE}\"
+-.if defined(IPV6_LINKLOCAL_PEER)
++
+ CFLAGS+= -DIPV6_LINKLOCAL_PEER
+-.endif
++
+ YFLAGS=
++
++LDFLAGS = -lbsd -lrt
++
+ MAN= bgpd.8 bgpd.conf.5
+ 
+-.include <bsd.prog.mk>
++CC = gcc
++
++OBJS = $(subst .c,.o,$(subst .y,.o,$(SRCS)))
++
++$(PROG): $(OBJS)
++
++clean:
++	rm -f $(OBJS)
++	rm -f $(subst .y,.c,$(filter %.y,$(SRCS)))
++
++distclean: clean
++	rm -f $(PROG)
++
++.PHONY: distclean clean
+-- 

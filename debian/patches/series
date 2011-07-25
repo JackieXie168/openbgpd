@@ -1,0 +1,13 @@
+0001-Import-FreeBSD-port-patches-4.9.20110612.patch
+0002-Do-not-break-strict-aliasing-rules-in-addr2sa.patch
+0003-Do-not-break-strict-aliasing-in-imsg_read.patch
+0004-Do-not-break-strict-aliasing-rules-in-msgbuf_write.patch
+0005-Do-not-discard-qualifiers-from-pointer-in-hash32_str.patch
+0006-Fix-conditional-FreeBSD-include-for-GNU-kFreeBSD.patch
+0007-Make-Makefiles-work-out-of-a-FreeBSD-ports-tree.patch
+0008-Add-Werror-to-CFLAGS.patch
+0009-Remove-Wshadow-from-compile-flags.patch
+0010-Add-necessary-ifdef-s-and-define-s-for-glibc-and-lib.patch
+0011-Write-and-verify-a-pidfile-upon-startup.patch
+0012-Use-bgpd-instead-of-_bgpd-for-system-username.patch
+0013-Adjust-the-manpage-for-Debian-systems.patch

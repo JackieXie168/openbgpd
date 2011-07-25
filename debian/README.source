@@ -1,0 +1,47 @@
+======================================
+README.source for the openbgpd package
+======================================
+
+Packaging tools
+===============
+
+openbgpd is managed in a Git repository using git-buildpackage using
+pristine-tar. Quilt patches are managed using gbp-pq.
+Packaging practices also follow most of the advices provided by Russ Allbery
+at: http://www.eyrie.org/~eagle/notes/debian/git.html
+
+  * upstream: import of upstream tarballs
+  * patch-queue/*: branches exported to quilt patches (handled by gbp-pq)
+  * master: export of patch-queue/* branches and Debian specific changes
+
+Getting the FreeBSD port
+========================
+
+The openbgpd port from FreeBSD is available using CVS. The initial checkout
+procedure goes as:
+
+    $ CVSROOT=:pserver:anoncvs@anoncvs.fr.FreeBSD.org:/home/ncvs cvs login
+    $ CVSROOT=:pserver:anoncvs@anoncvs.fr.FreeBSD.org:/home/ncvs cvs co ports/net/openbgpd
+
+For subsequent updates, one has to run:
+
+    $ cd ports && cvs update
+
+Adding patches
+--------------
+
+openbgpd port is shipped with many patches. Those lies in
+ports/net/openbgpd/files. Unfortunately, those patches are not semantic: there
+is a patch for each file that have been modified.
+
+So for this package, all those patches are merged into a single patch, similar
+to a tarball import, that lies at the start of the patch series.
+
+Extracting copyrights for new files
+-----------------------------------
+
+Some of the patches shipped in the port creates new files. Those might have
+different copyrights and should be added to `debian/copyright`. In order to see
+which files are being added, one can run the following command:
+
+    $ rgrep -h -A1 '^--- /dev/null' ports/net/openbgpd/files | awk '/^+++/ { print $2 }'

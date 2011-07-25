@@ -1,0 +1,23 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sun, 24 Jul 2011 23:32:06 +0200
+Subject: [PATCH] Remove -Wshadow from compile flags
+
+It triggers an useless error in rde_update.c due to hton*() macros.
+---
+ bgpd/Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/bgpd/Makefile b/bgpd/Makefile
+index 6835945..a9379c7 100644
+--- a/bgpd/Makefile
++++ b/bgpd/Makefile
+@@ -12,7 +12,7 @@ CFLAGS+= -Wall -Werror -I$(CURDIR)
+ CFLAGS+= -I$(CURDIR)/../openbsd-compat
+ CFLAGS+= -Wstrict-prototypes -Wmissing-prototypes
+ CFLAGS+= -Wmissing-declarations
+-CFLAGS+= -Wshadow -Wpointer-arith -Wcast-qual
++CFLAGS+= -Wpointer-arith -Wcast-qual
+ CFLAGS+= -Wsign-compare
+ CFLAGS+= -DCONFFILE=\"${CONFFILE}\"
+ 
+-- 

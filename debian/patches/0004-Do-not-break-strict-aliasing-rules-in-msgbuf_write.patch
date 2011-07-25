@@ -1,0 +1,22 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sun, 24 Jul 2011 23:52:02 +0200
+Subject: [PATCH] Do not break strict-aliasing rules in msgbuf_write()
+
+---
+ openbsd-compat/imsg-buffer.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/openbsd-compat/imsg-buffer.c b/openbsd-compat/imsg-buffer.c
+index dec27ff..bda9e8c 100644
+--- a/openbsd-compat/imsg-buffer.c
++++ b/openbsd-compat/imsg-buffer.c
+@@ -253,7 +253,7 @@ msgbuf_write(struct msgbuf *msgbuf)
+ 		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+ 		cmsg->cmsg_level = SOL_SOCKET;
+ 		cmsg->cmsg_type = SCM_RIGHTS;
+-		*(int *)CMSG_DATA(cmsg) = buf->fd;
++		memcpy(CMSG_DATA(cmsg), &buf->fd, sizeof(int));
+ 	}
+ 
+ 	if ((n = sendmsg(msgbuf->fd, &msg, 0)) == -1) {
+-- 

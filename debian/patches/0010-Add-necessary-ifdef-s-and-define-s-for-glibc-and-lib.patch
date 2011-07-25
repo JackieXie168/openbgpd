@@ -1,0 +1,282 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sat, 23 Jul 2011 18:20:41 +0200
+Subject: [PATCH] Add necessary #ifdef's and #define's for glibc and libbsd
+
+---
+ bgpctl/irr_output.c             |    5 +++++
+ bgpctl/irr_parser.c             |    4 ++++
+ bgpctl/irr_prefix.c             |    4 ++++
+ bgpctl/parser.c                 |    5 +++++
+ bgpd/bgpd.c                     |    5 +++++
+ bgpd/config.c                   |    4 ++++
+ bgpd/log.c                      |    5 +++++
+ bgpd/parse.y                    |    8 ++++++++
+ bgpd/rde.c                      |    4 ++++
+ bgpd/rde_rib.c                  |    4 ++++
+ bgpd/session.c                  |    4 ++++
+ openbsd-compat/fmt_scaled.c     |    4 ++++
+ openbsd-compat/hash.h           |    1 +
+ openbsd-compat/openbsd-compat.h |   28 ++++++++++++++++++++++++++++
+ 14 files changed, 85 insertions(+), 0 deletions(-)
+
+diff --git a/bgpctl/irr_output.c b/bgpctl/irr_output.c
+index 3b93c32..4bc50b3 100644
+--- a/bgpctl/irr_output.c
++++ b/bgpctl/irr_output.c
+@@ -16,6 +16,11 @@
+  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++/* for asprintf() and others */
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1
++#endif
++
+ #include <sys/types.h>
+ #include <sys/param.h>
+ #include <sys/stat.h>
+diff --git a/bgpctl/irr_parser.c b/bgpctl/irr_parser.c
+index 33e51e8..7dac052 100644
+--- a/bgpctl/irr_parser.c
++++ b/bgpctl/irr_parser.c
+@@ -25,6 +25,10 @@
+ #include <string.h>
+ #include <unistd.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/stdlib.h>
++#endif
++
+ #include "irrfilter.h"
+ 
+ #define PARSEBUF_INCREMENT 4096
+diff --git a/bgpctl/irr_prefix.c b/bgpctl/irr_prefix.c
+index df85a6b..93951ba 100644
+--- a/bgpctl/irr_prefix.c
++++ b/bgpctl/irr_prefix.c
+@@ -28,6 +28,10 @@
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/stdlib.h>
++#endif
++
+ #include "irrfilter.h"
+ #include "bgpd.h"
+ 
+diff --git a/bgpctl/parser.c b/bgpctl/parser.c
+index 24a8c59..1d6a637 100644
+--- a/bgpctl/parser.c
++++ b/bgpctl/parser.c
+@@ -32,6 +32,11 @@
+ #include <string.h>
+ #include <unistd.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/stdlib.h>
++#include <bsd/getopt.h>
++#endif
++
+ #include "parser.h"
+ #include "irrfilter.h"
+ 
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index 7a177fa..100ee90 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -16,6 +16,11 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++/* for asprintf() and others */
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1
++#endif
++
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <sys/wait.h>
+diff --git a/bgpd/config.c b/bgpd/config.c
+index 9079d10..d047422 100644
+--- a/bgpd/config.c
++++ b/bgpd/config.c
+@@ -33,6 +33,10 @@
+ #include <string.h>
+ #include <unistd.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/stdlib.h>
++#endif
++
+ #include "bgpd.h"
+ #include "session.h"
+ 
+diff --git a/bgpd/log.c b/bgpd/log.c
+index 5c2d690..eedaa8e 100644
+--- a/bgpd/log.c
++++ b/bgpd/log.c
+@@ -16,6 +16,11 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++/* for asprintf() and others */
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1
++#endif
++
+ #include <err.h>
+ #include <errno.h>
+ #include <netdb.h>
+diff --git a/bgpd/parse.y b/bgpd/parse.y
+index 1b7df01..7b56438 100644
+--- a/bgpd/parse.y
++++ b/bgpd/parse.y
+@@ -20,6 +20,10 @@
+  */
+ 
+ %{
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1
++#endif
++
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <sys/stat.h>
+@@ -39,6 +43,10 @@
+ #include <string.h>
+ #include <syslog.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/stdlib.h>
++#endif
++
+ #include "bgpd.h"
+ #include "mrt.h"
+ #include "session.h"
+diff --git a/bgpd/rde.c b/bgpd/rde.c
+index 74c07cd..4173f2b 100644
+--- a/bgpd/rde.c
++++ b/bgpd/rde.c
+@@ -16,6 +16,10 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1 /* for setresuid(), setresgid() */
++#endif
++
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <sys/time.h>
+diff --git a/bgpd/rde_rib.c b/bgpd/rde_rib.c
+index 2eae07a..e16861c 100644
+--- a/bgpd/rde_rib.c
++++ b/bgpd/rde_rib.c
+@@ -27,6 +27,10 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#ifdef __GLIBC__
++#include <time.h>
++#endif
++
+ #include "bgpd.h"
+ #include "rde.h"
+ 
+diff --git a/bgpd/session.c b/bgpd/session.c
+index b777a39..b68f8f0 100644
+--- a/bgpd/session.c
++++ b/bgpd/session.c
+@@ -16,6 +16,10 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1 /* for setresuid(), setresgid() */
++#endif
++
+ #include <sys/param.h>
+ #include <sys/types.h>
+ 
+diff --git a/openbsd-compat/fmt_scaled.c b/openbsd-compat/fmt_scaled.c
+index 134dbfb..37553ff 100644
+--- a/openbsd-compat/fmt_scaled.c
++++ b/openbsd-compat/fmt_scaled.c
+@@ -43,6 +43,10 @@
+ #include <ctype.h>
+ #include <limits.h>
+ 
++#ifdef __GLIBC__
++#include <bsd/string.h>
++#endif
++
+ #include "util.h"
+ 
+ typedef enum {
+diff --git a/openbsd-compat/hash.h b/openbsd-compat/hash.h
+index 4f57deb..73013a3 100644
+--- a/openbsd-compat/hash.h
++++ b/openbsd-compat/hash.h
+@@ -28,6 +28,7 @@
+ #ifndef _SYS_HASH_H_
+ #define	_SYS_HASH_H_
+ #include <sys/types.h>
++#include <sys/endian.h>
+ 
+ /*
+  * Note: SMALL_KERNEL might be used to shrink these, right now I
+diff --git a/openbsd-compat/openbsd-compat.h b/openbsd-compat/openbsd-compat.h
+index 79322d5..819fce2 100644
+--- a/openbsd-compat/openbsd-compat.h
++++ b/openbsd-compat/openbsd-compat.h
+@@ -7,6 +7,32 @@
+ 
+ #define	__dead
+ 
++/* for asprintf() and others */
++#ifdef __GLIBC__
++#define _GNU_SOURCE 1
++#endif
++
++/* setproctitle() and others from libbsd */
++#ifdef __GLIBC__
++#include <bsd/unistd.h>
++#endif /* __GLIBC__ */
++
++/* strlcpy() */
++#ifdef __GLIBC__
++#include <bsd/string.h>
++#endif
++
++/* for setgroups() */
++#ifdef __GLIBC__
++#define _BSD_SOURCE 1
++#include <grp.h>
++#endif
++
++/* for poll() */
++#ifdef __GLIBC__
++#define INFTIM ((int) -1)
++#endif
++
+ /* bgpctl/bgpctl.c */
+ #include <sys/endian.h>
+ #define betoh64(x)	(be64toh(x))
+@@ -20,6 +46,7 @@ typedef unsigned long	ulong;
+ #endif
+ #define RTA_LABEL	0
+ 
++#if defined(__FreeBSD__) /* not GNU/kFreeBSD */
+ #define SIMPLEQ_FOREACH         STAILQ_FOREACH
+ #define SIMPLEQ_FIRST           STAILQ_FIRST
+ #define SIMPLEQ_REMOVE_HEAD     STAILQ_REMOVE_HEAD
+@@ -28,6 +55,7 @@ typedef unsigned long	ulong;
+ #define SIMPLEQ_HEAD            STAILQ_HEAD
+ #define SIMPLEQ_INIT            STAILQ_INIT
+ #define SIMPLEQ_HEAD_INITIALIZER	STAILQ_HEAD_INITIALIZER
++#endif
+ 
+ /* Routing priorities used by the different routing protocols */
+ #define RTP_NONE        0       /* unset priority use sane default */
+-- 

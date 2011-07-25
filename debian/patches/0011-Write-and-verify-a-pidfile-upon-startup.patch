@@ -1,0 +1,182 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Mon, 25 Jul 2011 09:44:11 +0200
+Subject: [PATCH] Write and verify a pidfile upon startup
+
+---
+ bgpd/bgpd.c    |   28 ++++++++++++++++++++++++----
+ bgpd/bgpd.h    |    1 +
+ bgpd/rde.c     |    4 +++-
+ bgpd/session.c |    4 +++-
+ bgpd/session.h |    5 +++--
+ 5 files changed, 34 insertions(+), 8 deletions(-)
+
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index 100ee90..be1a48a 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -36,6 +36,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include <libutil.h>
+ 
+ #include "bgpd.h"
+ #include "mrt.h"
+@@ -111,6 +112,7 @@ main(int argc, char *argv[])
+ 	struct listen_addr	*la;
+ 	struct pollfd		 pfd[POLL_MAX];
+ 	pid_t			 io_pid = 0, rde_pid = 0, pid;
++	struct pidfh		*pfh;
+ 	char			*conffile;
+ 	int			 debug = 0;
+ 	int			 ch, timeout, nfds;
+@@ -187,10 +189,26 @@ main(int argc, char *argv[])
+ 	if (getpwnam(BGPD_USER) == NULL)
+ 		errx(1, "unknown user %s", BGPD_USER);
+ 
++	pfh = pidfile_open(PIDFILE_NAME, 0600, &pid);
++	if (pfh == NULL) {
++		if (errno == EEXIST) {
++			errx(1, "daemon already running, pid: %jd",
++			     (intmax_t) pid);
++		}
++		warn("Cannot open or create pidfile");
++	}
++
+ 	log_init(debug);
+ 
+-	if (!debug)
+-		daemon(1, 0);
++	if (!debug) {
++		if (daemon(1, 0) == -1) {
++			warn("Cannot daemonize");
++			pidfile_remove(pfh);
++			exit(1);
++		}
++	}
++
++	pidfile_write(pfh);
+ 
+ 	log_info("startup");
+ 
+@@ -212,8 +230,8 @@ main(int argc, char *argv[])
+ 	session_socket_blockmode(pipe_s2r_c[1], BM_NONBLOCK);
+ 
+ 	/* fork children */
+-	rde_pid = rde_main(pipe_m2r, pipe_s2r, pipe_m2s, pipe_s2r_c, debug);
+-	io_pid = session_main(pipe_m2s, pipe_s2r, pipe_m2r, pipe_s2r_c);
++	rde_pid = rde_main(pipe_m2r, pipe_s2r, pipe_m2s, pipe_s2r_c, debug, pfh);
++	io_pid = session_main(pipe_m2s, pipe_s2r, pipe_m2r, pipe_s2r_c, pfh);
+ 
+ 	setproctitle("parent");
+ 
+@@ -376,6 +394,8 @@ main(int argc, char *argv[])
+ 	free(rcname);
+ 	free(cname);
+ 
++	pidfile_remove(pfh);
++
+ 	log_info("Terminating");
+ 	return (0);
+ }
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index eed7c3f..c7d68b1 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -71,6 +71,7 @@
+ #define	BGPD_LOG_UPDATES		0x0001
+ 
+ #define	SOCKET_NAME			"/var/run/bgpd.sock"
++#define	PIDFILE_NAME			"/var/run/bgpd.pid"
+ 
+ #define	F_BGPD_INSERTED		0x0001
+ #define	F_KERNEL		0x0002
+diff --git a/bgpd/rde.c b/bgpd/rde.c
+index 4173f2b..e04d264 100644
+--- a/bgpd/rde.c
++++ b/bgpd/rde.c
+@@ -35,6 +35,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include <libutil.h>
+ 
+ #include "bgpd.h"
+ #include "mrt.h"
+@@ -160,7 +161,7 @@ u_int32_t	nexthophashsize = 64;
+ 
+ pid_t
+ rde_main(int pipe_m2r[2], int pipe_s2r[2], int pipe_m2s[2], int pipe_s2rctl[2],
+-    int debug)
++    int debug, struct pidfh *pfh)
+ {
+ 	struct rlimit		 rl;
+ 	pid_t			 pid;
+@@ -176,6 +177,7 @@ rde_main(int pipe_m2r[2], int pipe_s2r[2], int pipe_m2s[2], int pipe_s2rctl[2],
+ 	case -1:
+ 		fatal("cannot fork");
+ 	case 0:
++		pidfile_close(pfh);
+ 		break;
+ 	default:
+ 		return (pid);
+diff --git a/bgpd/session.c b/bgpd/session.c
+index b68f8f0..9d6e481 100644
+--- a/bgpd/session.c
++++ b/bgpd/session.c
+@@ -46,6 +46,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include <libutil.h>
+ 
+ #include "bgpd.h"
+ #include "mrt.h"
+@@ -186,7 +187,7 @@ setup_listeners(u_int *la_cnt)
+ 
+ pid_t
+ session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
+-    int pipe_s2rctl[2])
++    int pipe_s2rctl[2], struct pidfh *pfh)
+ {
+ 	struct rlimit		 rl;
+ 	int			 nfds, timeout, pfkeysock;
+@@ -209,6 +210,7 @@ session_main(int pipe_m2s[2], int pipe_s2r[2], int pipe_m2r[2],
+ 	case -1:
+ 		fatal("cannot fork");
+ 	case 0:
++		pidfile_close(pfh);
+ 		break;
+ 	default:
+ 		return (pid);
+diff --git a/bgpd/session.h b/bgpd/session.h
+index 2bfa138..5658eff 100644
+--- a/bgpd/session.h
++++ b/bgpd/session.h
+@@ -19,6 +19,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <time.h>
++#include <libutil.h>
+ 
+ #define	MAX_BACKLOG			5
+ #define	INTERVAL_CONNECTRETRY		120
+@@ -234,7 +235,7 @@ struct ctl_timer {
+ 
+ /* session.c */
+ void		 session_socket_blockmode(int, enum blockmodes);
+-pid_t		 session_main(int[2], int[2], int[2], int[2]);
++pid_t		 session_main(int[2], int[2], int[2], int[2], struct pidfh *);
+ void		 bgp_fsm(struct peer *, enum session_events);
+ int		 session_neighbor_rrefresh(struct peer *p);
+ struct peer	*getpeerbyaddr(struct bgpd_addr *);
+@@ -263,7 +264,7 @@ void	 prepare_listeners(struct bgpd_config *);
+ int	 get_mpe_label(struct rdomain *);
+ 
+ /* rde.c */
+-pid_t	 rde_main(int[2], int[2], int[2], int[2], int);
++pid_t	 rde_main(int[2], int[2], int[2], int[2], int, struct pidfh *);
+ 
+ /* control.c */
+ int	control_init(int, char *);
+-- 

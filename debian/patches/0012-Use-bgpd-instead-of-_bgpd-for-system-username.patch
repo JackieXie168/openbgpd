@@ -1,0 +1,22 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sat, 23 Jul 2011 22:24:04 +0200
+Subject: [PATCH] Use bgpd instead of _bgpd for system username
+
+---
+ bgpd/bgpd.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index c7d68b1..fd19e7c 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -41,7 +41,7 @@
+ #ifndef CONFFILE
+ #define	CONFFILE			"/etc/bgpd.conf"
+ #endif /* !CONFFILE */
+-#define	BGPD_USER			"_bgpd"
++#define	BGPD_USER			"bgpd"
+ #define	PEER_DESCR_LEN			32
+ #define	PFTABLE_LEN			16
+ #define	TCP_MD5_KEY_LEN			80
+-- 

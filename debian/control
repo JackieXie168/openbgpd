@@ -1,0 +1,22 @@
+Source: openbgpd
+Section: net
+Priority: optional
+Maintainer: Jérémy Bobbio <lunar@debian.org>
+Build-Depends:
+ debhelper (>= 7.0.50~),
+ hardening-wrapper,
+ bison,
+ libbsd-dev
+Standards-Version: 3.9.2
+Homepage: http://www.openbgpd.org/
+Vcs-Git: git://anonscm.debian.org/git/collab-maint/openbgpd.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/openbgpd.git
+
+Package: openbgpd
+Architecture: kfreebsd-i386 kfreebsd-amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, lsb-base (>= 3.2-14), adduser
+Description: OpenBSD BGP routing daemon
+ OpenBGPD is a FREE implementation of the Border Gateway Protocol, Version 4.
+ .
+ It allows ordinary machines to be used as routers exchanging routes with
+ other systems speaking the BGP protocol.

@@ -1,0 +1,22 @@
+From: =?UTF-8?q?J=C3=A9r=C3=A9my=20Bobbio?= <lunar@debian.org>
+Date: Sun, 24 Jul 2011 23:44:58 +0200
+Subject: [PATCH] Do not break strict-aliasing in imsg_read()
+
+---
+ openbsd-compat/imsg.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/openbsd-compat/imsg.c b/openbsd-compat/imsg.c
+index a0be894..99c3b08 100644
+--- a/openbsd-compat/imsg.c
++++ b/openbsd-compat/imsg.c
+@@ -77,7 +77,7 @@ imsg_read(struct imsgbuf *ibuf)
+ 	    cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+ 		if (cmsg->cmsg_level == SOL_SOCKET &&
+ 		    cmsg->cmsg_type == SCM_RIGHTS) {
+-			fd = (*(int *)CMSG_DATA(cmsg));
++			memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
+ 			if ((ifd = calloc(1, sizeof(struct imsg_fd))) == NULL) {
+ 				close(fd);
+ 				return (-1);
+-- 
