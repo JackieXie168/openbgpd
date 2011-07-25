@@ -1,0 +1,4 @@
+*.o
+bgpd/parser.c
+bgpd/bgpd
+bgpctl/bgpctl
