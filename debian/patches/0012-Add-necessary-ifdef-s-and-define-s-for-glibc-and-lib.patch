@@ -66,7 +66,7 @@ index df85a6b..93951ba 100644
  #include "bgpd.h"
  
 diff --git a/bgpctl/parser.c b/bgpctl/parser.c
-index 24a8c59..1d6a637 100644
+index 24a8c59..fd2924f 100644
 --- a/bgpctl/parser.c
 +++ b/bgpctl/parser.c
 @@ -32,6 +32,11 @@

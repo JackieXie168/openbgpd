@@ -21,7 +21,7 @@ Subject: [PATCH] Fix conditional FreeBSD include for GNU/kFreeBSD
  15 files changed, 74 insertions(+), 74 deletions(-)
 
 diff --git a/bgpctl/bgpctl.c b/bgpctl/bgpctl.c
-index c684295..531a57e 100644
+index 765c9e6..648077f 100644
 --- a/bgpctl/bgpctl.c
 +++ b/bgpctl/bgpctl.c
 @@ -16,19 +16,19 @@
@@ -48,7 +48,7 @@ index c684295..531a57e 100644
  #include <net/if_types.h>
  
  #include <err.h>
-@@ -37,11 +37,11 @@
+@@ -38,11 +38,11 @@
  #include <stdlib.h>
  #include <string.h>
  #include <unistd.h>
@@ -62,7 +62,7 @@ index c684295..531a57e 100644
  
  #include "bgpd.h"
  #include "session.h"
-@@ -50,9 +50,9 @@
+@@ -51,9 +51,9 @@
  #include "parser.h"
  #include "irrfilter.h"
  
