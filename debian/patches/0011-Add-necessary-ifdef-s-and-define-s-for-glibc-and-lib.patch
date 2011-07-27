@@ -75,7 +75,7 @@ index 24a8c59..1d6a637 100644
  
 +#ifdef __GLIBC__
 +#include <bsd/stdlib.h>
-+#include <bsd/getopt.h>
++#include <bsd/unistd.h>
 +#endif
 +
  #include "parser.h"

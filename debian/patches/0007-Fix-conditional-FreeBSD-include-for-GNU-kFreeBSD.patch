@@ -508,7 +508,7 @@ index 3086b88..5edbb6b 100644
  #endif
  
 diff --git a/bgpd/rde_attr.c b/bgpd/rde_attr.c
-index eab471f..c8435a6 100644
+index 9d1173e..32638a5 100644
 --- a/bgpd/rde_attr.c
 +++ b/bgpd/rde_attr.c
 @@ -17,11 +17,11 @@
