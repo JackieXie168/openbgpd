@@ -1,3 +1,12 @@
+openbgpd (4.6-2) unstable; urgency=low
+
+  * Fix FTBFS on current unstable:
+    - remove occurences of seg_type that were unused, thus triggering
+    '-Wunused-but-set-variables' warnings,
+    - use <bsd/unistd.h> instead of the deprecated <bsd/getopt.h>.
+
+ -- Jérémy Bobbio <lunar@debian.org>  Wed, 27 Jul 2011 16:14:54 +0200
+
 openbgpd (4.6-1) unstable; urgency=low
 
   * Initial release, FreeBSD port version 4.9.20110612. (Closes: #635283)
