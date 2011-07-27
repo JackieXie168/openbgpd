@@ -1,3 +1,10 @@
+openbgpd (4.6-3) unstable; urgency=low
+
+  * Fix FTBFS on kfreebsd-amd64:
+    - use portable printf() format strings instead of always using '%ll'.
+
+ -- Jérémy Bobbio <lunar@debian.org>  Wed, 27 Jul 2011 19:21:44 +0200
+
 openbgpd (4.6-2) unstable; urgency=low
 
   * Fix FTBFS on current unstable:
