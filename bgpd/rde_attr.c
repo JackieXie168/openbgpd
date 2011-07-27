@@ -799,11 +799,10 @@ aspath_loopfree(struct aspath *aspath, u_int32_t myAS)
 {
 	u_int8_t	*seg;
 	u_int16_t	 len, seg_size;
-	u_int8_t	 i, seg_len, seg_type;
+	u_int8_t	 i, seg_len;
 
 	seg = aspath->data;
 	for (len = aspath->len; len > 0; len -= seg_size, seg += seg_size) {
-		seg_type = seg[0];
 		seg_len = seg[1];
 		seg_size = 2 + sizeof(u_int32_t) * seg_len;
 
@@ -937,7 +936,7 @@ aspath_match(struct aspath *a, enum as_spec type, u_int32_t as)
 	u_int8_t	*seg;
 	int		 final;
 	u_int16_t	 len, seg_size;
-	u_int8_t	 i, seg_type, seg_len;
+	u_int8_t	 i, seg_len;
 
 	if (type == AS_EMPTY) {
 		if (a->len == 0)
@@ -949,7 +948,6 @@ aspath_match(struct aspath *a, enum as_spec type, u_int32_t as)
 	final = 0;
 	seg = a->data;
 	for (len = a->len; len > 0; len -= seg_size, seg += seg_size) {
-		seg_type = seg[0];
 		seg_len = seg[1];
 		seg_size = 2 + sizeof(u_int32_t) * seg_len;
 
@@ -998,7 +996,7 @@ aspath_lenmatch(struct aspath *a, enum aslen_spec type, u_int aslen)
 	u_int32_t	 as, lastas = 0;
 	u_int		 count = 0;
 	u_int16_t	 len, seg_size;
-	u_int8_t	 i, seg_type, seg_len;
+	u_int8_t	 i, seg_len;
 
 	if (type == ASLEN_MAX) {
 		if (aslen < aspath_count(a->data, a->len))
@@ -1010,7 +1008,6 @@ aspath_lenmatch(struct aspath *a, enum aslen_spec type, u_int aslen)
 	/* type == ASLEN_SEQ */
 	seg = a->data;
 	for (len = a->len; len > 0; len -= seg_size, seg += seg_size) {
-		seg_type = seg[0];
 		seg_len = seg[1];
 		seg_size = 2 + sizeof(u_int32_t) * seg_len;
 
