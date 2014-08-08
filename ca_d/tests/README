@@ -1,0 +1,9 @@
+
+** remember to add test suites to
+
+  - check_pbgp.h
+  - check_main.c
+
+  export CK_DEFAULT_TIMEOUT=2000
+
+  assert(setup->n > #asnums)

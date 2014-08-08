@@ -1,0 +1,45 @@
+* REQUIRED
+
+  pbc-0.5.12.tar.gz
+  libgmp3-dev
+  libssl-dev
+  libdb4.8-dev (5.x will work as well)
+  uuid-dev
+
+* ONLY FOR DEVELOPERS
+
+  autoconf
+  automake
+  libtool
+  check
+
+--
+
+$ pkg_info
+
+autoconf-2.65       automatically configure source code on many Un*x platforms
+automake-1.11.1p2   GNU standards-compliant Makefile generator
+bash-4.2.20         GNU Bourne Again Shell
+check-0.9.6         unit test framework for C programs
+db-4.6.21v0         Berkeley DB package, revision 4
+e2fsprogs-1.41.4p7  utilities to manipulate ext2 filesystems
+gettext-0.18.1p1    GNU gettext
+gmp-5.0.2p0         library for arbitrary precision arithmetic
+joe-3.7p1           Joe's Own Editor
+libiconv-1.14       character set conversion library
+libidn-1.22         internationalized string handling
+libltdl-2.4.2       GNU libtool system independent dlopen wrapper
+libsigsegv-2.8      library for handling page faults in user mode
+libtool-2.4.2       generic shared library support script
+m4-1.4.16           GNU m4
+metaauto-1.0        wrapper for gnu auto*
+screen-4.0.3p2      multi-screen window manager
+wget-1.13.4         retrieve files from the web via HTTP, HTTPS and FTP
+
+--
+
+  libtoolize
+
+  AUTOCONF_VERSION=2.65 AUTOMAKE_VERSION=1.11 ./autogen.sh
+
+  LDFLAGS="-L/usr/local/lib -L/usr/local/lib/db4" CPPFLAGS="-I/usr/local/include -I/usr/local/include/db4" ./configure
