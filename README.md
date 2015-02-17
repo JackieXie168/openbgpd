@@ -1,4 +1,4 @@
-﻿## Courtesy of pfSense
+## Courtesy of pfSense
 
 This is a fork of OpenBSD's OpenBGPd that
 
