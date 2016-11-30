@@ -247,7 +247,7 @@ static const struct token t_neighbor[] = {
 
 static const struct token t_neighbor_modifiers[] = {
 	{ KEYWORD,	"up",		NEIGHBOR_UP,		NULL},
-	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		NULL},
+	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_neighbor_down_reason},
 	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		NULL},
 	{ KEYWORD,	"refresh",	NEIGHBOR_RREFRESH,	NULL},
 	{ KEYWORD,	"destroy",	NEIGHBOR_DESTROY,	NULL},
