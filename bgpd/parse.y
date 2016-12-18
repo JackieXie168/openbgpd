@@ -1052,14 +1052,8 @@ peeropts	: REMOTEAS as4number	{
 		| PASSIVE		{
 			curpeer->conf.passive = 1;
 		}
-		| DOWN STRING {
+		| DOWN		{
 			curpeer->conf.down = 1;
-			/* XXX Habbie */	
-			if (!length($2) {
-				yyerror("Shutdown communication too long.", $2);
-				free($2);
-				YYERROR;
-			}		
 		}
 		| RIB STRING	{
 			if (!find_rib($2)) {
