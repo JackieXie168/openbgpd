@@ -2316,6 +2316,7 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
+		// TODO check length, care about control characters
 		printf("XXX shutdown message: [%s]\n", p);
 	}
 
