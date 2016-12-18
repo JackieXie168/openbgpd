@@ -2316,7 +2316,7 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
-		printf("XXX shutdown message: [%s]", p);
+		printf("XXX shutdown message: [%s]\n", p);
 	}
 
 	return (0);
