@@ -343,18 +343,18 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_DOWN:
-					session_stop(p, ERR_CEASE_ADMIN_DOWN);
+					session_stop(p, ERR_CEASE_ADMIN_DOWN, NULL);
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_CLEAR:
 					if (!p->conf.down) {
 						session_stop(p,
-						    ERR_CEASE_ADMIN_RESET);
+						    ERR_CEASE_ADMIN_RESET, NULL);
 						timer_set(p, Timer_IdleHold,
 						    SESSION_CLEAR_DELAY);
 					} else {
 						session_stop(p,
-						    ERR_CEASE_ADMIN_DOWN);
+						    ERR_CEASE_ADMIN_DOWN, NULL);
 					}
 					control_result(c, CTL_RES_OK);
 					break;

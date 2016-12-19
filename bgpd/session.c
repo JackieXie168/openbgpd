@@ -272,7 +272,7 @@ session_main(int debug, int verbose)
 
 				/* reinit due? */
 				if (p->conf.reconf_action == RECONF_REINIT) {
-					session_stop(p, ERR_CEASE_ADMIN_RESET);
+					session_stop(p, ERR_CEASE_ADMIN_RESET, NULL);
 					if (!p->conf.down)
 						timer_set(p, Timer_IdleHold, 0);
 				}
@@ -282,7 +282,7 @@ session_main(int debug, int verbose)
 					if (p->demoted)
 						session_demote(p, -1);
 					p->conf.demote_group[0] = 0;
-					session_stop(p, ERR_CEASE_PEER_UNCONF);
+					session_stop(p, ERR_CEASE_PEER_UNCONF, NULL);
 					log_peer_warnx(&p->conf, "removed");
 					if (last != NULL)
 						last->next = next;
@@ -571,7 +571,7 @@ session_main(int debug, int verbose)
 
 	while ((p = peers) != NULL) {
 		peers = p->next;
-		session_stop(p, ERR_CEASE_ADMIN_DOWN);
+		session_stop(p, ERR_CEASE_ADMIN_DOWN, "bgpd shutting down");
 		pfkey_remove(p);
 		free(p);
 	}
@@ -2773,7 +2773,7 @@ session_dispatch_imsg(struct imsgbuf *ibuf, int idx, u_int *listener_cnt)
 					} else if (!depend_ok && p->depend_ok) {
 						p->depend_ok = depend_ok;
 						session_stop(p,
-						    ERR_CEASE_OTHER_CHANGE);
+						    ERR_CEASE_OTHER_CHANGE, NULL);
 					}
 				}
 			break;
@@ -2932,7 +2932,7 @@ session_dispatch_imsg(struct imsgbuf *ibuf, int idx, u_int *listener_cnt)
 				    imsg.hdr.peerid);
 				break;
 			}
-			session_stop(p, ERR_CEASE_ADMIN_DOWN);
+			session_stop(p, ERR_CEASE_ADMIN_DOWN, NULL);
 			break;
 		default:
 			break;
@@ -3198,13 +3198,21 @@ session_demote(struct peer *p, int level)
 }
 
 void
-session_stop(struct peer *peer, u_int8_t subcode)
+session_stop(struct peer *peer, u_int8_t subcode, char *reason)
 {
+	char *data=NULL;
+	ssize_t datalen=0;
+	if(reason) {
+		datalen=strlen(reason)+1;
+		data=malloc(datalen);
+		data[0]=datalen-1;
+		memcpy(data+1, reason, datalen-1);
+	}
 	switch (peer->state) {
 	case STATE_OPENSENT:
 	case STATE_OPENCONFIRM:
 	case STATE_ESTABLISHED:
-		session_notification(peer, ERR_CEASE, subcode, NULL, 0);
+		session_notification(peer, ERR_CEASE, subcode, data, datalen);
 		break;
 	default:
 		/* session not open, no need to send notification */
