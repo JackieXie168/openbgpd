@@ -343,7 +343,7 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_DOWN:
-					session_stop(p, ERR_CEASE_ADMIN_DOWN, NULL);
+					session_stop(p, ERR_CEASE_ADMIN_DOWN, neighbor->shutdown_notice);
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_CLEAR:

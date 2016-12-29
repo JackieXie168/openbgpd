@@ -45,6 +45,7 @@ enum token_type {
 	PREFIX,
 	PEERDESC,
 	RIBNAME,
+	SHUTDOWN_NOTICE,
 	COMMUNITY,
 	LARGE_COMMUNITY,
 	LOCALPREF,
@@ -245,9 +246,14 @@ static const struct token t_neighbor[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
+static const struct token t_neighbor_modifiers_shutdown_notice[] = {
+	{ SHUTDOWN_NOTICE,	"",		NONE,		NULL},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
 static const struct token t_neighbor_modifiers[] = {
 	{ KEYWORD,	"up",		NEIGHBOR_UP,		NULL},
-	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		NULL},
+	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_neighbor_modifiers_shutdown_notice},
 	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		NULL},
 	{ KEYWORD,	"refresh",	NEIGHBOR_RREFRESH,	NULL},
 	{ KEYWORD,	"destroy",	NEIGHBOR_DESTROY,	NULL},
@@ -571,6 +577,16 @@ match_token(int *argc, char **argv[], const struct token table[])
 				t = &table[i];
 			}
 			break;
+		case SHUTDOWN_NOTICE:
+fprintf(stderr, "matched SHUTDOWN_NOTICE\n");
+			if (!match && word != NULL && wordlen > 0) {
+				if (strlcpy(res.shutdown_notice, word, sizeof(res.shutdown_notice)) >=
+				    sizeof(res.shutdown_notice))
+					errx(1, "shutdown message too long");
+				match++;
+				t = &table[i];
+			}
+			break;
 		case COMMUNITY:
 			if (word != NULL && wordlen > 0 &&
 			    parse_community(word, &res)) {
@@ -694,6 +710,9 @@ show_valid_args(const struct token table[])
 		case RIBNAME:
 			fprintf(stderr, "  <rib name>\n");
 			break;
+		case SHUTDOWN_NOTICE:
+			fprintf(stderr, "  <down reason>\n");
+			break;
 		case COMMUNITY:
 			fprintf(stderr, "  <community>\n");
 			break;
@@ -727,6 +746,9 @@ show_valid_args(const struct token table[])
 			break;
 		case BULK:
 		case ENDTOKEN:
+			break;
+		default:
+			fprintf(stderr, " WHAT\n");
 			break;
 		}
 	}
