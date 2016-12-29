@@ -723,6 +723,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		    inet_ntoa(ina));
 		printf("%s\n", print_auth_method(p->auth.method));
 		printf("  BGP state = %s", statenames[p->state]);
+		if(p->conf.down) printf(", marked down");
 		if (p->stats.last_updown != 0)
 			printf(", %s for %s",
 			    p->state == STATE_ESTABLISHED ? "up" : "down",
