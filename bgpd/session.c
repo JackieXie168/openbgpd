@@ -2221,6 +2221,7 @@ parse_notification(struct peer *peer)
 	u_int8_t	 subcode;
 	u_int8_t	 capa_code;
 	u_int8_t	 capa_len;
+	u_int8_t	 shutdown_communication_len;
 	u_int8_t	 i;
 
 	/* just log */
@@ -2316,8 +2317,23 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
-		// TODO check length, care about control characters
-		printf("XXX shutdown message: [%s]\n", p);
+		// TODO care about control characters
+		if(datalen) {
+			memcpy(&shutdown_communication_len, p, sizeof(shutdown_communication_len));
+			p += sizeof(shutdown_communication_len);
+			datalen -= sizeof(shutdown_communication_len);
+			if(datalen < shutdown_communication_len) {
+				log_peer_warnx(&peer->conf, "received truncated shutdown communication");
+				return (0);
+			}
+			if(shutdown_communication_len > 128) {
+				log_peer_warnx(&peer->conf, "received overly long shutdown communication");
+				return (0);
+			}
+			log_peer_warnx(&peer->conf, "received shutdown communication: %*s", shutdown_communication_len, p);
+			p+=shutdown_communication_len;
+			datalen-=shutdown_communication_len;
+		}
 	}
 
 	return (0);
