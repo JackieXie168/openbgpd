@@ -2326,7 +2326,7 @@ parse_notification(struct peer *peer)
 				log_peer_warnx(&peer->conf, "received truncated shutdown communication");
 				return (0);
 			}
-			if(shutdown_communication_len > 128) {
+			if(shutdown_communication_len > (SHUTDOWN_NOTICE_LEN-1)) {
 				log_peer_warnx(&peer->conf, "received overly long shutdown communication");
 				return (0);
 			}
