@@ -168,6 +168,7 @@ struct peer_stats {
 	u_int32_t		 prefix_cnt;
 	u_int8_t		 last_sent_errcode;
 	u_int8_t		 last_sent_suberr;
+	char			 last_shutdown_communication[SHUTDOWN_NOTICE_LEN];
 };
 
 enum Timer {

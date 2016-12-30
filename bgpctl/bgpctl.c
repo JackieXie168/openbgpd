@@ -768,7 +768,11 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			errstr = get_errstr(p->stats.last_sent_errcode,
 			    p->stats.last_sent_suberr);
 			if (errstr)
-				printf("  Last error: %s\n\n", errstr);
+				printf("  Last error: %s\n", errstr);
+			if (*(p->stats.last_shutdown_communication)) // TODO use vis(3) here
+				printf("  Last received shutdown communication: %s\n", p->stats.last_shutdown_communication);
+			if (errstr)
+				printf("\n");
 		} else {
 			if (getnameinfo((struct sockaddr *)&p->sa_local,
 			    (socklen_t)p->sa_local.ss_len,

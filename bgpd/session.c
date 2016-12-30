@@ -2331,6 +2331,7 @@ parse_notification(struct peer *peer)
 				return (0);
 			}
 			log_peer_warnx(&peer->conf, "received shutdown communication: %*s", shutdown_communication_len, p);
+			strlcpy(peer->stats.last_shutdown_communication, p, shutdown_communication_len);
 			p+=shutdown_communication_len;
 			datalen-=shutdown_communication_len;
 		}
