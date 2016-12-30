@@ -3216,13 +3216,19 @@ session_demote(struct peer *p, int level)
 void
 session_stop(struct peer *peer, u_int8_t subcode, char *reason)
 {
-	char *data=NULL;
-	ssize_t datalen=0;
+	uint8_t datalen=0;
+	uint8_t shutdown_communication_len;
+
+	// prepend datalen; do not copy trailing NUL
+	char data[SHUTDOWN_NOTICE_LEN+sizeof(datalen)-sizeof(char)];
+
 	if(reason) {
-		datalen=strlen(reason)+1;
-		data=malloc(datalen);
-		data[0]=datalen-1;
-		memcpy(data+1, reason, datalen-1);
+		shutdown_communication_len=strlen(reason);
+		if(shutdown_communication_len < SHUTDOWN_NOTICE_LEN) {
+			data[0] = shutdown_communication_len;
+			datalen = shutdown_communication_len + sizeof(data[0]);
+			memcpy(data + 1, reason, shutdown_communication_len);
+                }
 	}
 	switch (peer->state) {
 	case STATE_OPENSENT:
