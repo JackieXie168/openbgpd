@@ -1052,8 +1052,19 @@ peeropts	: REMOTEAS as4number	{
 		| PASSIVE		{
 			curpeer->conf.passive = 1;
 		}
-		| DOWN		{
+		| DOWN			{
 			curpeer->conf.down = 1;
+		}
+		| DOWN STRING		{
+			curpeer->conf.down = 1;
+			if(strlcpy(curpeer->conf.shutdown_notice, $2,
+			   sizeof(curpeer->conf.shutdown_notice)) >=
+			   sizeof(curpeer->conf.shutdown_notice)) {
+				yyerror("shutdown notice too long");
+				free($2);
+				YYERROR;
+			}
+			free($2);
 		}
 		| RIB STRING	{
 			if (!find_rib($2)) {
