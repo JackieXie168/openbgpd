@@ -247,6 +247,7 @@ static const struct token t_neighbor[] = {
 };
 
 static const struct token t_neighbor_modifiers_shutdown_notice[] = {
+	{ NOTOKEN,	"",		NONE,		NULL},
 	{ SHUTDOWN_NOTICE,	"",		NONE,		NULL},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
