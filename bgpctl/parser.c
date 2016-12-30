@@ -578,7 +578,6 @@ match_token(int *argc, char **argv[], const struct token table[])
 			}
 			break;
 		case SHUTDOWN_NOTICE:
-fprintf(stderr, "matched SHUTDOWN_NOTICE\n");
 			if (!match && word != NULL && wordlen > 0) {
 				if (strlcpy(res.shutdown_notice, word, sizeof(res.shutdown_notice)) >=
 				    sizeof(res.shutdown_notice))
@@ -746,9 +745,6 @@ show_valid_args(const struct token table[])
 			break;
 		case BULK:
 		case ENDTOKEN:
-			break;
-		default:
-			fprintf(stderr, " WHAT\n");
 			break;
 		}
 	}
