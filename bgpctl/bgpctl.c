@@ -162,7 +162,7 @@ main(int argc, char *argv[])
 
 	memcpy(&neighbor.addr, &res->peeraddr, sizeof(neighbor.addr));
 	strlcpy(neighbor.descr, res->peerdesc, sizeof(neighbor.descr));
-        strlcpy(neighbor.shutdown_notice, res->shutdown_notice, sizeof(neighbor.shutdown_notice));
+	strlcpy(neighbor.shutdown_notice, res->shutdown_notice, sizeof(neighbor.shutdown_notice));
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		err(1, "control_init: socket");
