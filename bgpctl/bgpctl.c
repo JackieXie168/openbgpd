@@ -726,7 +726,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		if (p->conf.down) {
 			printf(", marked down");
 			if(*(p->conf.shutdown_notice))
-				printf(" with reason \"%s\"", p->conf.shutdown_notice);
+				printf(" with reason \"%s\"", log_shutdown_communication(p->conf.shutdown_notice));
 		}
 		if (p->stats.last_updown != 0)
 			printf(", %s for %s",
@@ -763,7 +763,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		print_neighbor_msgstats(p);
 		printf("\n");
 		if (*(p->stats.last_shutdown_communication)) // TODO use vis(3) here
-			printf("  Last received shutdown communication: %s\n", p->stats.last_shutdown_communication);
+			printf("  Last received shutdown communication: %s\n", log_shutdown_communication(p->stats.last_shutdown_communication));
 		if (p->state == STATE_IDLE) {
 			static const char	*errstr;
 

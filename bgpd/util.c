@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <vis.h>
 
 #include "bgpd.h"
 #include "rde.h"
@@ -156,6 +157,24 @@ log_ext_subtype(u_int8_t subtype)
 		snprintf(etype, sizeof(etype), "[%u]", subtype);
 		return (etype);
 	}
+}
+
+const char *
+log_shutdown_communication(const char *communication) {
+	static char buf[SHUTDOWN_NOTICE_LEN * 4 + 1]; // actually bigger than needed
+	const char *p;
+	char *q;
+
+	p = communication;
+	for (q = buf; *p && q < &buf[SHUTDOWN_NOTICE_LEN * 4 + 1 - 4 - 1]; p++) {
+		if (*p == '\n')
+			*q++ = ' ';
+		else
+			q = vis(q, *p, 0, 0);
+	}
+	*q = '\0';
+
+	return buf;
 }
 
 const char *
