@@ -2330,8 +2330,9 @@ parse_notification(struct peer *peer)
 				log_peer_warnx(&peer->conf, "received overly long shutdown communication");
 				return (0);
 			}
-			log_peer_warnx(&peer->conf, "received shutdown communication: %*s", shutdown_communication_len, p);
-			strlcpy(peer->stats.last_shutdown_communication, p, shutdown_communication_len);
+			memcpy(peer->stats.last_shutdown_communication, p, shutdown_communication_len);
+			peer->stats.last_shutdown_communication[shutdown_communication_len] = '\0';
+			log_peer_warnx(&peer->conf, "received shutdown communication: %s", peer->stats.last_shutdown_communication);
 			p+=shutdown_communication_len;
 			datalen-=shutdown_communication_len;
 		}
