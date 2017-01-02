@@ -3224,7 +3224,7 @@ session_stop(struct peer *peer, u_int8_t subcode, char *reason)
 	// prepend datalen; do not copy trailing NUL
 	char data[SHUTDOWN_NOTICE_LEN+sizeof(datalen)-sizeof(char)];
 
-	if(reason) {
+	if(reason && *reason) {
 		shutdown_communication_len=strlen(reason);
 		if(shutdown_communication_len < SHUTDOWN_NOTICE_LEN) {
 			data[0] = shutdown_communication_len;
