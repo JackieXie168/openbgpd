@@ -2317,7 +2317,6 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
-		// TODO care about control characters and whatever the draft says about UTF-8
 		if(datalen) {
 			memcpy(&shutdown_communication_len, p, sizeof(shutdown_communication_len));
 			p += sizeof(shutdown_communication_len);
