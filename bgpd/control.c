@@ -358,7 +358,7 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 						    SESSION_CLEAR_DELAY);
 					} else {
 						session_stop(p,
-						    ERR_CEASE_ADMIN_DOWN, NULL);
+						    ERR_CEASE_ADMIN_DOWN, p->conf.shutdown_communication);
 					}
 					control_result(c, CTL_RES_OK);
 					break;
