@@ -762,7 +762,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			break;
 		print_neighbor_msgstats(p);
 		printf("\n");
-		if (*(p->stats.last_shutdown_communication)) // TODO use vis(3) here
+		if (*(p->stats.last_shutdown_communication))
 			printf("  Last received shutdown communication: %s\n", log_shutdown_communication(p->stats.last_shutdown_communication));
 		if (p->state == STATE_IDLE) {
 			static const char	*errstr;
