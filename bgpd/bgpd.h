@@ -40,7 +40,7 @@
 #define	CONFFILE			"/etc/bgpd.conf"
 #define	BGPD_USER			"_bgpd"
 #define	PEER_DESCR_LEN			32
-#define	SHUTDOWN_NOTICE_LEN             129
+#define	SHUTDOWN_COMMUNICATION_LEN             129
 #define	PFTABLE_LEN			32
 #define	TCP_MD5_KEY_LEN			80
 #define	IPSEC_ENC_KEY_LEN		32
@@ -300,7 +300,7 @@ struct peer_config {
 	struct capabilities	 capabilities;
 	char			 group[PEER_DESCR_LEN];
 	char			 descr[PEER_DESCR_LEN];
-	char			 shutdown_notice[SHUTDOWN_NOTICE_LEN];
+	char			 shutdown_communication[SHUTDOWN_COMMUNICATION_LEN];
 	char			 rib[PEER_DESCR_LEN];
 	char			 if_depend[IFNAMSIZ];
 	char			 demote_group[IFNAMSIZ];
@@ -588,7 +588,7 @@ struct ctl_show_nexthop {
 struct ctl_neighbor {
 	struct bgpd_addr	addr;
 	char			descr[PEER_DESCR_LEN];
-	char			shutdown_notice[SHUTDOWN_NOTICE_LEN];
+	char			shutdown_communication[SHUTDOWN_COMMUNICATION_LEN];
 	int			show_timers;
 };
 

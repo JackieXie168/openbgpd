@@ -162,7 +162,7 @@ main(int argc, char *argv[])
 
 	memcpy(&neighbor.addr, &res->peeraddr, sizeof(neighbor.addr));
 	strlcpy(neighbor.descr, res->peerdesc, sizeof(neighbor.descr));
-	strlcpy(neighbor.shutdown_notice, res->shutdown_notice, sizeof(neighbor.shutdown_notice));
+	strlcpy(neighbor.shutdown_communication, res->shutdown_communication, sizeof(neighbor.shutdown_communication));
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		err(1, "control_init: socket");
@@ -725,8 +725,8 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		printf("  BGP state = %s", statenames[p->state]);
 		if (p->conf.down) {
 			printf(", marked down");
-			if(*(p->conf.shutdown_notice))
-				printf(" with reason \"%s\"", log_shutdown_communication(p->conf.shutdown_notice));
+			if(*(p->conf.shutdown_communication))
+				printf(" with communication \"%s\"", log_shutdown_communication(p->conf.shutdown_communication));
 		}
 		if (p->stats.last_updown != 0)
 			printf(", %s for %s",

@@ -1057,10 +1057,10 @@ peeropts	: REMOTEAS as4number	{
 		}
 		| DOWN STRING		{
 			curpeer->conf.down = 1;
-			if(strlcpy(curpeer->conf.shutdown_notice, $2,
-			   sizeof(curpeer->conf.shutdown_notice)) >=
-			   sizeof(curpeer->conf.shutdown_notice)) {
-				yyerror("shutdown notice too long");
+			if(strlcpy(curpeer->conf.shutdown_communication, $2,
+			   sizeof(curpeer->conf.shutdown_communication)) >=
+			   sizeof(curpeer->conf.shutdown_communication)) {
+				yyerror("shutdown communication too long");
 				free($2);
 				YYERROR;
 			}

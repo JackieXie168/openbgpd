@@ -2325,7 +2325,7 @@ parse_notification(struct peer *peer)
 				log_peer_warnx(&peer->conf, "received truncated shutdown communication");
 				return (0);
 			}
-			if(shutdown_communication_len > (SHUTDOWN_NOTICE_LEN-1)) {
+			if(shutdown_communication_len > (SHUTDOWN_COMMUNICATION_LEN-1)) {
 				log_peer_warnx(&peer->conf, "received overly long shutdown communication");
 				return (0);
 			}
@@ -3215,20 +3215,20 @@ session_demote(struct peer *p, int level)
 }
 
 void
-session_stop(struct peer *peer, u_int8_t subcode, char *reason)
+session_stop(struct peer *peer, u_int8_t subcode, char *communication)
 {
 	uint8_t datalen=0;
 	uint8_t shutdown_communication_len;
 
 	// prepend datalen; do not copy trailing NUL
-	char data[SHUTDOWN_NOTICE_LEN+sizeof(datalen)-sizeof(char)];
+	char data[SHUTDOWN_COMMUNICATION_LEN+sizeof(datalen)-sizeof(char)];
 
-	if(reason && *reason) {
-		shutdown_communication_len=strlen(reason);
-		if(shutdown_communication_len < SHUTDOWN_NOTICE_LEN) {
+	if(communication && *communication) {
+		shutdown_communication_len=strlen(communication);
+		if(shutdown_communication_len < SHUTDOWN_COMMUNICATION_LEN) {
 			data[0] = shutdown_communication_len;
 			datalen = shutdown_communication_len + sizeof(data[0]);
-			memcpy(data + 1, reason, shutdown_communication_len);
+			memcpy(data + 1, communication, shutdown_communication_len);
                 }
 	}
 	switch (peer->state) {
