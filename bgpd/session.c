@@ -3223,7 +3223,7 @@ session_stop(struct peer *peer, u_int8_t subcode, char *communication)
 	// prepend datalen; do not copy trailing NUL
 	char data[SHUTDOWN_COMMUNICATION_LEN+sizeof(datalen)-sizeof(char)];
 
-	if(communication && *communication) {
+	if(subcode == ERR_CEASE_ADMIN_DOWN && communication && *communication) {
 		shutdown_communication_len=strlen(communication);
 		if(shutdown_communication_len < SHUTDOWN_COMMUNICATION_LEN) {
 			data[0] = shutdown_communication_len;
