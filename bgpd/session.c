@@ -2317,7 +2317,7 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
-		if(datalen) {
+		if (datalen >= sizeof(shutdown_communication_len)) {
 			memcpy(&shutdown_communication_len, p, sizeof(shutdown_communication_len));
 			p += sizeof(shutdown_communication_len);
 			datalen -= sizeof(shutdown_communication_len);
