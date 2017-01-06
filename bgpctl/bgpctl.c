@@ -162,7 +162,9 @@ main(int argc, char *argv[])
 
 	memcpy(&neighbor.addr, &res->peeraddr, sizeof(neighbor.addr));
 	strlcpy(neighbor.descr, res->peerdesc, sizeof(neighbor.descr));
-	strlcpy(neighbor.shutdown_communication, res->shutdown_communication, sizeof(neighbor.shutdown_communication));
+	strlcpy(neighbor.shutdown_communication,
+		res->shutdown_communication,
+		sizeof(neighbor.shutdown_communication));
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		err(1, "control_init: socket");
@@ -725,8 +727,9 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		printf("  BGP state = %s", statenames[p->state]);
 		if (p->conf.down) {
 			printf(", marked down");
-			if(*(p->conf.shutdown_communication))
-				printf(" with communication \"%s\"", log_shutdown_communication(p->conf.shutdown_communication));
+			if (*(p->conf.shutdown_communication))
+				printf(" with communication \"%s\"",
+				       log_shutdown_communication(p->conf.shutdown_communication));
 		}
 		if (p->stats.last_updown != 0)
 			printf(", %s for %s",
@@ -763,7 +766,8 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		print_neighbor_msgstats(p);
 		printf("\n");
 		if (*(p->stats.last_shutdown_communication))
-			printf("  Last received shutdown communication: %s\n", log_shutdown_communication(p->stats.last_shutdown_communication));
+			printf("  Last received shutdown communication: %s\n",
+			       log_shutdown_communication(p->stats.last_shutdown_communication));
 		if (p->state == STATE_IDLE) {
 			static const char	*errstr;
 

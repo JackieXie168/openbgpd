@@ -161,7 +161,8 @@ log_ext_subtype(u_int8_t subtype)
 
 const char *
 log_shutdown_communication(const char *communication) {
-	static char buf[SHUTDOWN_COMMUNICATION_LEN * 4 + 1]; // actually bigger than needed
+	/* the buf is bigger than actually needed */
+	static char buf[SHUTDOWN_COMMUNICATION_LEN * 4 + 1];
 	const char *p;
 	char *q;
 

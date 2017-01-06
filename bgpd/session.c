@@ -2318,20 +2318,28 @@ parse_notification(struct peer *peer)
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
 		if (datalen >= sizeof(shutdown_communication_len)) {
-			memcpy(&shutdown_communication_len, p, sizeof(shutdown_communication_len));
+			memcpy(&shutdown_communication_len, p,
+			    sizeof(shutdown_communication_len));
 			p += sizeof(shutdown_communication_len);
 			datalen -= sizeof(shutdown_communication_len);
 			if(datalen < shutdown_communication_len) {
-				log_peer_warnx(&peer->conf, "received truncated shutdown communication");
+				log_peer_warnx(&peer->conf,
+				    "received truncated shutdown communication");
 				return (0);
 			}
-			if(shutdown_communication_len > (SHUTDOWN_COMMUNICATION_LEN-1)) {
-				log_peer_warnx(&peer->conf, "received overly long shutdown communication");
+			if (shutdown_communication_len >
+			    (SHUTDOWN_COMMUNICATION_LEN-1)) {
+				log_peer_warnx(&peer->conf,
+				    "received overly long shutdown communication");
 				return (0);
 			}
-			memcpy(peer->stats.last_shutdown_communication, p, shutdown_communication_len);
+			memcpy(peer->stats.last_shutdown_communication,
+			    p, shutdown_communication_len);
 			peer->stats.last_shutdown_communication[shutdown_communication_len] = '\0';
-			log_peer_warnx(&peer->conf, "received shutdown communication: %s", log_shutdown_communication(peer->stats.last_shutdown_communication));
+			log_peer_warnx(&peer->conf,
+			    "received shutdown communication: %s",
+		            log_shutdown_communication(
+				peer->stats.last_shutdown_communication));
 			p+=shutdown_communication_len;
 			datalen-=shutdown_communication_len;
 		}
@@ -3223,12 +3231,14 @@ session_stop(struct peer *peer, u_int8_t subcode, char *communication)
 	// prepend datalen; do not copy trailing NUL
 	char data[SHUTDOWN_COMMUNICATION_LEN+sizeof(datalen)-sizeof(char)];
 
-	if(subcode == ERR_CEASE_ADMIN_DOWN && communication && *communication) {
+	if (subcode == ERR_CEASE_ADMIN_DOWN &&
+	    communication && *communication) {
 		shutdown_communication_len=strlen(communication);
 		if(shutdown_communication_len < SHUTDOWN_COMMUNICATION_LEN) {
 			data[0] = shutdown_communication_len;
 			datalen = shutdown_communication_len + sizeof(data[0]);
-			memcpy(data + 1, communication, shutdown_communication_len);
+			memcpy(data + 1, communication,
+			    shutdown_communication_len);
                 }
 	}
 	switch (peer->state) {

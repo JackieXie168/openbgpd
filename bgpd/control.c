@@ -345,9 +345,12 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_DOWN:
-					session_stop(p, ERR_CEASE_ADMIN_DOWN, neighbor->shutdown_communication);
+					session_stop(p, ERR_CEASE_ADMIN_DOWN, 
+					    neighbor->shutdown_communication);
 					p->conf.down = 1;
-					strlcpy(p->conf.shutdown_communication, neighbor->shutdown_communication, sizeof(neighbor->shutdown_communication));
+					strlcpy(p->conf.shutdown_communication,
+					    neighbor->shutdown_communication,
+					    sizeof(neighbor->shutdown_communication));
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_CLEAR:
@@ -358,7 +361,8 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 						    SESSION_CLEAR_DELAY);
 					} else {
 						session_stop(p,
-						    ERR_CEASE_ADMIN_DOWN, p->conf.shutdown_communication);
+						    ERR_CEASE_ADMIN_DOWN,
+						    p->conf.shutdown_communication);
 					}
 					control_result(c, CTL_RES_OK);
 					break;

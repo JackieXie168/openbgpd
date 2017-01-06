@@ -580,7 +580,9 @@ match_token(int *argc, char **argv[], const struct token table[])
 			break;
 		case SHUTDOWN_COMMUNICATION:
 			if (!match && word != NULL && wordlen > 0) {
-				if (strlcpy(res.shutdown_communication, word, sizeof(res.shutdown_communication)) >=
+				if (strlcpy(res.shutdown_communication,
+					    word,
+					    sizeof(res.shutdown_communication)) >=
 				    sizeof(res.shutdown_communication))
 					errx(1, "shutdown message too long");
 				match++;
