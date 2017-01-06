@@ -1087,7 +1087,7 @@ const char	*log_sockaddr(struct sockaddr *);
 const char	*log_as(u_int32_t);
 const char	*log_rd(u_int64_t);
 const char	*log_ext_subtype(u_int8_t);
-const char      *log_shutcomm(const char *communication);
+const char	*log_shutcomm(const char *communication);
 int		 aspath_snprint(char *, size_t, void *, u_int16_t);
 int		 aspath_asprint(char **, void *, u_int16_t);
 size_t		 aspath_strlen(void *, u_int16_t);

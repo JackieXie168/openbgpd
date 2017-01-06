@@ -2335,7 +2335,7 @@ parse_notification(struct peer *peer)
 			peer->stats.last_shutcomm[shutcomm_len] = '\0';
 			log_peer_warnx(&peer->conf,
 			    "received shutdown communication: %s",
-		            log_shutcomm(peer->stats.last_shutcomm));
+			    log_shutcomm(peer->stats.last_shutcomm));
 			p+=shutcomm_len;
 			datalen-=shutcomm_len;
 		}
