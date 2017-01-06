@@ -66,7 +66,7 @@ struct parse_result {
 	struct filter_largecommunity  large_community;
 	char			 peerdesc[PEER_DESCR_LEN];
 	char			 rib[PEER_DESCR_LEN];
-	char			 shutdown_communication[SHUTDOWN_COMMUNICATION_LEN];
+	char			 shutcomm[SHUTCOMM_LEN];
 	char			*irr_outdir;
 	int			 flags;
 	u_int			 rtableid;

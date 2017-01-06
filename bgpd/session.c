@@ -2221,7 +2221,7 @@ parse_notification(struct peer *peer)
 	u_int8_t	 subcode;
 	u_int8_t	 capa_code;
 	u_int8_t	 capa_len;
-	u_int8_t	 shutdown_communication_len;
+	u_int8_t	 shutcomm_len;
 	u_int8_t	 i;
 
 	/* just log */
@@ -2317,31 +2317,31 @@ parse_notification(struct peer *peer)
 	}
 
 	if (errcode == ERR_CEASE && subcode == ERR_CEASE_ADMIN_DOWN) {
-		if (datalen >= sizeof(shutdown_communication_len)) {
-			memcpy(&shutdown_communication_len, p,
-			    sizeof(shutdown_communication_len));
-			p += sizeof(shutdown_communication_len);
-			datalen -= sizeof(shutdown_communication_len);
-			if(datalen < shutdown_communication_len) {
+		if (datalen >= sizeof(shutcomm_len)) {
+			memcpy(&shutcomm_len, p,
+			    sizeof(shutcomm_len));
+			p += sizeof(shutcomm_len);
+			datalen -= sizeof(shutcomm_len);
+			if(datalen < shutcomm_len) {
 				log_peer_warnx(&peer->conf,
 				    "received truncated shutdown communication");
 				return (0);
 			}
-			if (shutdown_communication_len >
-			    (SHUTDOWN_COMMUNICATION_LEN-1)) {
+			if (shutcomm_len >
+			    (SHUTCOMM_LEN-1)) {
 				log_peer_warnx(&peer->conf,
 				    "received overly long shutdown communication");
 				return (0);
 			}
-			memcpy(peer->stats.last_shutdown_communication,
-			    p, shutdown_communication_len);
-			peer->stats.last_shutdown_communication[shutdown_communication_len] = '\0';
+			memcpy(peer->stats.last_shutcomm,
+			    p, shutcomm_len);
+			peer->stats.last_shutcomm[shutcomm_len] = '\0';
 			log_peer_warnx(&peer->conf,
 			    "received shutdown communication: %s",
-		            log_shutdown_communication(
-				peer->stats.last_shutdown_communication));
-			p+=shutdown_communication_len;
-			datalen-=shutdown_communication_len;
+		            log_shutcomm(
+				peer->stats.last_shutcomm));
+			p+=shutcomm_len;
+			datalen-=shutcomm_len;
 		}
 	}
 
@@ -3226,19 +3226,19 @@ void
 session_stop(struct peer *peer, u_int8_t subcode, char *communication)
 {
 	uint8_t datalen=0;
-	uint8_t shutdown_communication_len;
+	uint8_t shutcomm_len;
 
 	// prepend datalen; do not copy trailing NUL
-	char data[SHUTDOWN_COMMUNICATION_LEN+sizeof(datalen)-sizeof(char)];
+	char data[SHUTCOMM_LEN+sizeof(datalen)-sizeof(char)];
 
 	if (subcode == ERR_CEASE_ADMIN_DOWN &&
 	    communication && *communication) {
-		shutdown_communication_len=strlen(communication);
-		if(shutdown_communication_len < SHUTDOWN_COMMUNICATION_LEN) {
-			data[0] = shutdown_communication_len;
-			datalen = shutdown_communication_len + sizeof(data[0]);
+		shutcomm_len=strlen(communication);
+		if(shutcomm_len < SHUTCOMM_LEN) {
+			data[0] = shutcomm_len;
+			datalen = shutcomm_len + sizeof(data[0]);
 			memcpy(data + 1, communication,
-			    shutdown_communication_len);
+			    shutcomm_len);
                 }
 	}
 	switch (peer->state) {

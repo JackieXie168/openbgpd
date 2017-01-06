@@ -341,16 +341,16 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 				case IMSG_CTL_NEIGHBOR_UP:
 					bgp_fsm(p, EVNT_START);
 					p->conf.down = 0;
-					p->conf.shutdown_communication[0] = '\0';
+					p->conf.shutcomm[0] = '\0';
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_DOWN:
 					session_stop(p, ERR_CEASE_ADMIN_DOWN, 
-					    neighbor->shutdown_communication);
+					    neighbor->shutcomm);
 					p->conf.down = 1;
-					strlcpy(p->conf.shutdown_communication,
-					    neighbor->shutdown_communication,
-					    sizeof(neighbor->shutdown_communication));
+					strlcpy(p->conf.shutcomm,
+					    neighbor->shutcomm,
+					    sizeof(neighbor->shutcomm));
 					control_result(c, CTL_RES_OK);
 					break;
 				case IMSG_CTL_NEIGHBOR_CLEAR:
@@ -362,7 +362,7 @@ control_dispatch_msg(struct pollfd *pfd, u_int *ctl_cnt)
 					} else {
 						session_stop(p,
 						    ERR_CEASE_ADMIN_DOWN,
-						    p->conf.shutdown_communication);
+						    p->conf.shutcomm);
 					}
 					control_result(c, CTL_RES_OK);
 					break;

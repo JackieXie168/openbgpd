@@ -40,7 +40,7 @@
 #define	CONFFILE			"/etc/bgpd.conf"
 #define	BGPD_USER			"_bgpd"
 #define	PEER_DESCR_LEN			32
-#define	SHUTDOWN_COMMUNICATION_LEN             129
+#define	SHUTCOMM_LEN             129
 #define	PFTABLE_LEN			32
 #define	TCP_MD5_KEY_LEN			80
 #define	IPSEC_ENC_KEY_LEN		32
@@ -300,7 +300,7 @@ struct peer_config {
 	struct capabilities	 capabilities;
 	char			 group[PEER_DESCR_LEN];
 	char			 descr[PEER_DESCR_LEN];
-	char			 shutdown_communication[SHUTDOWN_COMMUNICATION_LEN];
+	char			 shutcomm[SHUTCOMM_LEN];
 	char			 rib[PEER_DESCR_LEN];
 	char			 if_depend[IFNAMSIZ];
 	char			 demote_group[IFNAMSIZ];
@@ -588,7 +588,7 @@ struct ctl_show_nexthop {
 struct ctl_neighbor {
 	struct bgpd_addr	addr;
 	char			descr[PEER_DESCR_LEN];
-	char			shutdown_communication[SHUTDOWN_COMMUNICATION_LEN];
+	char			shutcomm[SHUTCOMM_LEN];
 	int			show_timers;
 };
 
@@ -1087,7 +1087,7 @@ const char	*log_sockaddr(struct sockaddr *);
 const char	*log_as(u_int32_t);
 const char	*log_rd(u_int64_t);
 const char	*log_ext_subtype(u_int8_t);
-const char      *log_shutdown_communication(const char *communication);
+const char      *log_shutcomm(const char *communication);
 int		 aspath_snprint(char *, size_t, void *, u_int16_t);
 int		 aspath_asprint(char **, void *, u_int16_t);
 size_t		 aspath_strlen(void *, u_int16_t);

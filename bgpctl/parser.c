@@ -246,7 +246,7 @@ static const struct token t_neighbor[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
-static const struct token t_neighbor_modifiers_shutdown_communication[] = {
+static const struct token t_neighbor_modifiers_shutcom[] = {
 	{ NOTOKEN,	"",		NONE,		NULL},
 	{ SHUTDOWN_COMMUNICATION,	"",		NONE,		NULL},
 	{ ENDTOKEN,	"",		NONE,		NULL}
@@ -254,7 +254,7 @@ static const struct token t_neighbor_modifiers_shutdown_communication[] = {
 
 static const struct token t_neighbor_modifiers[] = {
 	{ KEYWORD,	"up",		NEIGHBOR_UP,		NULL},
-	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_neighbor_modifiers_shutdown_communication},
+	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_neighbor_modifiers_shutcom},
 	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		NULL},
 	{ KEYWORD,	"refresh",	NEIGHBOR_RREFRESH,	NULL},
 	{ KEYWORD,	"destroy",	NEIGHBOR_DESTROY,	NULL},
@@ -580,10 +580,10 @@ match_token(int *argc, char **argv[], const struct token table[])
 			break;
 		case SHUTDOWN_COMMUNICATION:
 			if (!match && word != NULL && wordlen > 0) {
-				if (strlcpy(res.shutdown_communication,
+				if (strlcpy(res.shutcom,
 					    word,
-					    sizeof(res.shutdown_communication)) >=
-				    sizeof(res.shutdown_communication))
+					    sizeof(res.shutcom)) >=
+				    sizeof(res.shutcom))
 					errx(1, "shutdown message too long");
 				match++;
 				t = &table[i];

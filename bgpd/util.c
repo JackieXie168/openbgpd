@@ -160,14 +160,14 @@ log_ext_subtype(u_int8_t subtype)
 }
 
 const char *
-log_shutdown_communication(const char *communication) {
+log_shutcomm(const char *communication) {
 	/* the buf is bigger than actually needed */
-	static char buf[SHUTDOWN_COMMUNICATION_LEN * 4 + 1];
+	static char buf[SHUTCOMM_LEN * 4 + 1];
 	const char *p;
 	char *q;
 
 	p = communication;
-	for (q = buf; *p && q < &buf[SHUTDOWN_COMMUNICATION_LEN * 4 + 1 - 4 - 1]; p++) {
+	for (q = buf; *p && q < &buf[SHUTCOMM_LEN * 4 + 1 - 4 - 1]; p++) {
 		if (*p == '\n')
 			*q++ = ' ';
 		else
