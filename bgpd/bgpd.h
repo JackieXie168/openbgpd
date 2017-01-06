@@ -40,7 +40,7 @@
 #define	CONFFILE			"/etc/bgpd.conf"
 #define	BGPD_USER			"_bgpd"
 #define	PEER_DESCR_LEN			32
-#define	SHUT_COMM_LEN             	129
+#define	SHUT_COMM_LEN			129
 #define	PFTABLE_LEN			32
 #define	TCP_MD5_KEY_LEN			80
 #define	IPSEC_ENC_KEY_LEN		32

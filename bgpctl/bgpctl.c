@@ -727,7 +727,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			printf(", marked down");
 			if (*(p->conf.shutcomm)) {
 				printf(" with communication \"%s\"",
-				       log_shutcomm(p->conf.shutcomm));
+				    log_shutcomm(p->conf.shutcomm));
 			}
 		}
 		if (p->stats.last_updown != 0)
@@ -766,7 +766,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		printf("\n");
 		if (*(p->stats.last_shutcomm)) {
 			printf("  Last received shutdown communication: %s\n",
-			       log_shutcomm(p->stats.last_shutcomm));
+			    log_shutcomm(p->stats.last_shutcomm));
 		}
 		if (p->state == STATE_IDLE) {
 			static const char	*errstr;

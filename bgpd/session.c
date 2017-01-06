@@ -3236,7 +3236,7 @@ session_stop(struct peer *peer, u_int8_t subcode, char *communication)
 			data[0] = shutcomm_len;
 			datalen = shutcomm_len + sizeof(data[0]);
 			memcpy(data + 1, communication, shutcomm_len);
-                }
+		}
 	}
 	switch (peer->state) {
 	case STATE_OPENSENT:
