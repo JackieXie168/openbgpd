@@ -104,8 +104,14 @@ Destroy a previously cloned peer.
 The peer must be down before calling this function.
 .Ar peer
 may be the neighbor's address or description.
-.It Cm neighbor Ar peer Cm down
-Take the BGP session to the specified neighbor down.
+.It Cm neighbor Ar peer Cm down Op Ar reason
+Take the BGP session to the specified neighbor down. If a
+.Ar reason
+is provided, the 
+.Ar reason
+is send as Administrative Shutdown Communication to the neighbor. The
+.Ar reason
+cannot exceed 128 octets.
 .Ar peer
 may be the neighbor's address or description.
 .It Cm neighbor Ar peer Cm refresh
