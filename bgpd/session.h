@@ -294,7 +294,7 @@ struct peer	*getpeerbyaddr(struct bgpd_addr *);
 struct peer	*getpeerbydesc(const char *);
 int		 imsg_ctl_parent(int, u_int32_t, pid_t, void *, u_int16_t);
 int		 imsg_ctl_rde(int, pid_t, void *, u_int16_t);
-void	 	 session_stop(struct peer *, u_int8_t, char *);
+void	 	 session_stop(struct peer *, u_int8_t);
 
 /* timer.c */
 time_t			 getmonotime(void);

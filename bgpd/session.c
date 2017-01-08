@@ -272,7 +272,7 @@ session_main(int debug, int verbose)
 
 				/* reinit due? */
 				if (p->conf.reconf_action == RECONF_REINIT) {
-					session_stop(p, ERR_CEASE_ADMIN_RESET, NULL);
+					session_stop(p, ERR_CEASE_ADMIN_RESET);
 					if (!p->conf.down)
 						timer_set(p, Timer_IdleHold, 0);
 				}
@@ -282,7 +282,7 @@ session_main(int debug, int verbose)
 					if (p->demoted)
 						session_demote(p, -1);
 					p->conf.demote_group[0] = 0;
-					session_stop(p, ERR_CEASE_PEER_UNCONF, NULL);
+					session_stop(p, ERR_CEASE_PEER_UNCONF);
 					log_peer_warnx(&p->conf, "removed");
 					if (last != NULL)
 						last->next = next;
@@ -571,7 +571,10 @@ session_main(int debug, int verbose)
 
 	while ((p = peers) != NULL) {
 		peers = p->next;
-		session_stop(p, ERR_CEASE_ADMIN_DOWN, "bgpd shutting down");
+		strlcpy(p->conf.shutcomm,
+		    "bgpd shutting down",
+		    sizeof(p->conf.shutcomm));
+		session_stop(p, ERR_CEASE_ADMIN_DOWN);
 		pfkey_remove(p);
 		free(p);
 	}
@@ -2794,7 +2797,7 @@ session_dispatch_imsg(struct imsgbuf *ibuf, int idx, u_int *listener_cnt)
 					} else if (!depend_ok && p->depend_ok) {
 						p->depend_ok = depend_ok;
 						session_stop(p,
-						    ERR_CEASE_OTHER_CHANGE, NULL);
+						    ERR_CEASE_OTHER_CHANGE);
 					}
 				}
 			break;
@@ -2953,7 +2956,7 @@ session_dispatch_imsg(struct imsgbuf *ibuf, int idx, u_int *listener_cnt)
 				    imsg.hdr.peerid);
 				break;
 			}
-			session_stop(p, ERR_CEASE_ADMIN_DOWN, NULL);
+			session_stop(p, ERR_CEASE_ADMIN_DOWN);
 			break;
 		default:
 			break;
@@ -3219,14 +3222,16 @@ session_demote(struct peer *p, int level)
 }
 
 void
-session_stop(struct peer *peer, u_int8_t subcode, char *communication)
+session_stop(struct peer *peer, u_int8_t subcode)
 {
+	char data[SHUT_COMM_LEN];
 	uint8_t datalen;
 	uint8_t shutcomm_len;
+	char *communication;
 
 	datalen=0;
 
-	char data[SHUT_COMM_LEN];
+	communication = peer->conf.shutcomm;
 
 	if (subcode == ERR_CEASE_ADMIN_DOWN && communication &&
 	    *communication) {
