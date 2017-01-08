@@ -583,7 +583,7 @@ match_token(int *argc, char **argv[], const struct token table[])
 				if (strlcpy(res.shutcomm, word,
 					sizeof(res.shutcomm)) >=
 					sizeof(res.shutcomm))
-					errx(1, "shutdown message too long");
+					errx(1, "shutdown reason too long");
 				match++;
 				t = &table[i];
 			}
@@ -712,7 +712,7 @@ show_valid_args(const struct token table[])
 			fprintf(stderr, "  <rib name>\n");
 			break;
 		case SHUTDOWN_COMMUNICATION:
-			fprintf(stderr, "  <shutdown communication>\n");
+			fprintf(stderr, "  <shutdown reason>\n");
 			break;
 		case COMMUNITY:
 			fprintf(stderr, "  <community>\n");

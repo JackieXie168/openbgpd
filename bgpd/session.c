@@ -2323,18 +2323,18 @@ parse_notification(struct peer *peer)
 			datalen -= sizeof(shutcomm_len);
 			if(datalen < shutcomm_len) {
 			    log_peer_warnx(&peer->conf,
-				"received truncated shutdown communication");
+				"received truncated shutdown reason");
 			    return (0);
 			}
 			if (shutcomm_len > (SHUT_COMM_LEN-1)) {
 			    log_peer_warnx(&peer->conf,
-				"received overly long shutdown communication");
+				"received overly long shutdown reason");
 			    return (0);
 			}
 			memcpy(peer->stats.last_shutcomm, p, shutcomm_len);
 			peer->stats.last_shutcomm[shutcomm_len] = '\0';
 			log_peer_warnx(&peer->conf,
-			    "received shutdown communication: %s",
+			    "received shutdown reason: %s",
 			    log_shutcomm(peer->stats.last_shutcomm));
 			p+=shutcomm_len;
 			datalen-=shutcomm_len;
