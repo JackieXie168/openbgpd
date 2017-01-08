@@ -765,7 +765,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 		print_neighbor_msgstats(p);
 		printf("\n");
 		if (*(p->stats.last_shutcomm)) {
-			printf("  Last received shutdown reason: %s\n",
+			printf("  Last received shutdown reason: \"%s\"\n",
 			    log_shutcomm(p->stats.last_shutcomm));
 		}
 		if (p->state == STATE_IDLE) {

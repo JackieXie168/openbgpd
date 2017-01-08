@@ -2337,7 +2337,7 @@ parse_notification(struct peer *peer)
 			memcpy(peer->stats.last_shutcomm, p, shutcomm_len);
 			peer->stats.last_shutcomm[shutcomm_len] = '\0';
 			log_peer_warnx(&peer->conf,
-			    "received shutdown reason: %s",
+			    "received shutdown reason: \"%s\"",
 			    log_shutcomm(peer->stats.last_shutcomm));
 			p+=shutcomm_len;
 			datalen-=shutcomm_len;
