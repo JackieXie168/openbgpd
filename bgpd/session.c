@@ -2339,8 +2339,8 @@ parse_notification(struct peer *peer)
 			log_peer_warnx(&peer->conf,
 			    "received shutdown reason: \"%s\"",
 			    log_shutcomm(peer->stats.last_shutcomm));
-			p+=shutcomm_len;
-			datalen-=shutcomm_len;
+			p += shutcomm_len;
+			datalen -= shutcomm_len;
 		}
 	}
 
@@ -3229,13 +3229,13 @@ session_stop(struct peer *peer, u_int8_t subcode)
 	uint8_t shutcomm_len;
 	char *communication;
 
-	datalen=0;
+	datalen = 0;
 
 	communication = peer->conf.shutcomm;
 
 	if (subcode == ERR_CEASE_ADMIN_DOWN && communication &&
 	    *communication) {
-		shutcomm_len=strlen(communication);
+		shutcomm_len = strlen(communication);
 		if(shutcomm_len < SHUT_COMM_LEN) {
 			data[0] = shutcomm_len;
 			datalen = shutcomm_len + sizeof(data[0]);
