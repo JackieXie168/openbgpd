@@ -2,6 +2,7 @@
 
 /*
  * Copyright (c) 2003, 2004, 2005 Henning Brauer <henning@openbsd.org>
+ * Copyright (c) 2017 Peter van Dijk <peter.van.dijk@powerdns.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
