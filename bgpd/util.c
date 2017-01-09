@@ -162,17 +162,8 @@ log_ext_subtype(u_int8_t subtype)
 const char *
 log_shutcomm(const char *communication) {
 	static char buf[(SHUT_COMM_LEN - 1) * 4 + 1];
-	const char *p;
-	char *q;
 
-	p = communication;
-	for (q = buf; *p && q < &buf[sizeof(buf) - 1]; p++) {
-		if (*p == '\n')
-			*q++ = ' ';
-		else
-			q = vis(q, *p, 0, 0);
-	}
-	*q = '\0';
+	strnvis(buf, communication, sizeof(buf), VIS_NL | VIS_OCTAL);
 
 	return buf;
 }
