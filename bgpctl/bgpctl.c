@@ -1,4 +1,4 @@
-/*	$OpenBSD: bgpctl.c,v 1.190 2016/10/14 16:05:35 phessler Exp $ */
+/*	$OpenBSD: bgpctl.c,v 1.191 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003 Henning Brauer <henning@openbsd.org>

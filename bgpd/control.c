@@ -1,4 +1,4 @@
-/*	$OpenBSD: control.c,v 1.84 2017/01/08 23:04:42 krw Exp $ */
+/*	$OpenBSD: control.c,v 1.85 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>

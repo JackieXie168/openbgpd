@@ -1,4 +1,4 @@
-/*	$OpenBSD: session.c,v 1.356 2016/12/19 07:19:55 claudio Exp $ */
+/*	$OpenBSD: session.c,v 1.357 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003, 2004, 2005 Henning Brauer <henning@openbsd.org>

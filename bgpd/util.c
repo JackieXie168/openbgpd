@@ -1,4 +1,4 @@
-/*	$OpenBSD: util.c,v 1.21 2016/06/03 17:36:37 benno Exp $ */
+/*	$OpenBSD: util.c,v 1.22 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2006 Claudio Jeker <claudio@openbsd.org>

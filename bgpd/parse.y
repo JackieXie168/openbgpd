@@ -1,4 +1,4 @@
-/*	$OpenBSD: parse.y,v 1.293 2017/01/05 13:53:09 krw Exp $ */
+/*	$OpenBSD: parse.y,v 1.294 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2002, 2003, 2004 Henning Brauer <henning@openbsd.org>

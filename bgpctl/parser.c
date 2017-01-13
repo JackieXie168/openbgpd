@@ -1,4 +1,4 @@
-/*	$OpenBSD: parser.c,v 1.74 2016/10/14 16:05:35 phessler Exp $ */
+/*	$OpenBSD: parser.c,v 1.75 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -246,15 +246,15 @@ static const struct token t_neighbor[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
-static const struct token t_neighbor_modifiers_shutcomm[] = {
+static const struct token t_nei_mod_shutc[] = {
 	{ NOTOKEN,	"",		NONE,		NULL},
-	{ SHUTDOWN_COMMUNICATION,	"",		NONE,		NULL},
+	{ SHUTDOWN_COMMUNICATION, "",	NONE,		NULL},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
 static const struct token t_neighbor_modifiers[] = {
 	{ KEYWORD,	"up",		NEIGHBOR_UP,		NULL},
-	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_neighbor_modifiers_shutcomm},
+	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_nei_mod_shutc},
 	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		NULL},
 	{ KEYWORD,	"refresh",	NEIGHBOR_RREFRESH,	NULL},
 	{ KEYWORD,	"destroy",	NEIGHBOR_DESTROY,	NULL},
@@ -581,8 +581,8 @@ match_token(int *argc, char **argv[], const struct token table[])
 		case SHUTDOWN_COMMUNICATION:
 			if (!match && word != NULL && wordlen > 0) {
 				if (strlcpy(res.shutcomm, word,
-					sizeof(res.shutcomm)) >=
-					sizeof(res.shutcomm))
+				    sizeof(res.shutcomm)) >=
+				    sizeof(res.shutcomm))
 					errx(1, "shutdown reason too long");
 				match++;
 				t = &table[i];
