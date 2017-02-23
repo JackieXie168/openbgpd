@@ -48,7 +48,9 @@
  * the timerid things are useless - we have only one ITIMER_REAL
  * timer.
  */
+#ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME ITIMER_REAL
+#endif
 #define itimerspec itimerval
 typedef uint64_t timer_t;
 typedef double   timer_c;

@@ -33,7 +33,9 @@
 
 // XXX only supports a single timer
 #define TIMER_ABSTIME -1
+#ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME CALENDAR_CLOCK
+#endif
 #define CLOCK_MONOTONIC SYSTEM_CLOCK
 
 typedef int clockid_t;

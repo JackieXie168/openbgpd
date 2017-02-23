@@ -81,28 +81,28 @@ static /**/const char *const rcsid[] = { (char *)rcsid, "\100(#)" msg }
 #include <errno.h>
 #define XSPERR(x) ((x == 0) ? -1 : -x)
 
-static int setresgid(gid_t r, gid_t e, gid_t x)
+static __inline__ int setresgid(gid_t r, gid_t e, gid_t x)
 {
    if (setgid(r) == -1)
       return XSPERR(errno);
    return setegid(e);
 }
 
-static int setresuid(uid_t r, uid_t e, uid_t x)
+static __inline__ int setresuid(uid_t r, uid_t e, uid_t x)
 {
    if (setuid(r) == -1)
       return XSPERR(errno);
    return seteuid(e);
 }
 
-static int getresgid(gid_t *r, gid_t *e, gid_t *x)
+static __inline__ int getresgid(gid_t *r, gid_t *e, gid_t *x)
 {
   *r = getgid();
   *e = getegid();
   return 0;
 }
 
-static int getresuid(uid_t *r, uid_t *e, uid_t *x)
+static __inline__ int getresuid(uid_t *r, uid_t *e, uid_t *x)
 {
   *r = getuid();
   *e = geteuid();
