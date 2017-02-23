@@ -1,4 +1,4 @@
-INCLUDES = -I. -I.. -I$(top_srcdir) -I$(top_srcdir)/openbsd-compat
+AM_CFLAGS = -I. -I.. -I$(top_srcdir) -I$(top_srcdir)/openbsd-compat
 bin_PROGRAMS = bgpd
 bgpd_SOURCES = bgpd.c buffer.c session.c log.c parse.y config.c imsg.c \
 	       rde.c rde_rib.c rde_decide.c rde_prefix.c mrt.c \

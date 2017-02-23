@@ -19,6 +19,12 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach_time.h>
+#define CLOCK_MONOTONIC SYSTEM_CLOCK
+#endif
 
 #include "bgpd.h"
 #include "session.h"
