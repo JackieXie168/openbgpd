@@ -7,6 +7,9 @@ AM_INIT_AUTOMAKE(1.6)
 ## AC_CONFIG_SRCDIR([bgpctl/bgpctl.c])
 AC_CONFIG_HEADER([config.h])
 
+dnl Detect the canonical host and target build environment
+AC_CANONICAL_HOST
+
 # Checks for programs.
 AC_PROG_CC
 # AC_PROG_YACC
@@ -391,10 +394,51 @@ AC_CHECK_TYPES(socklen_t,,,[
 # include <sys/socket.h>
 #endif
 ])
+
+
+##################### MODULES ##################################################
+#
+# Modules configuration
+#
+
+HostOS=`echo "$host" | sed 's/.*-//'`
+os_is_macosx=false
+nonLinuxOS=false
+AC_SUBST(HostOS)
+case ${HostOS} in
+	darwin* | powerpc*-*-darwin* | freebsd* | netbsd* | openbsd*)
+		userdefine_gethostbyname_r=true
+		os_is_macosx=true
+		nonLinuxOS=true
+		echo HostOS="$HostOS"
+		echo "userdefine_gethostbyname_r=true ..."
+		;;
+	*)
+		echo host="$host"
+		echo HostOS="$HostOS"
+		os_is_macosx=false
+		nonLinuxOS=false
+		userdefine_gethostbyname_r=false
+		echo "userdefine_gethostbyname_r=false ..."
+		;;
+esac		
+AM_CONDITIONAL([USER_DEFINE_GETHOSTBYNAME_R], [test x$userdefine_gethostbyname_r = xtrue])
+AM_COND_IF([USER_DEFINE_GETHOSTBYNAME_R],
+	[AC_DEFINE([USER_DEFINE_GETHOSTBYNAME_R], [1], [Enable GETHOSTBYNAME_R module])])
+
+AM_CONDITIONAL([IS_DARWIN], [test x$os_is_macosx = xtrue])
+AM_COND_IF([IS_DARWIN],
+	[AC_DEFINE([IS_DARWIN], [1], [Get HostOS Type is Darwin])])
+
+AM_CONDITIONAL([NON_LINUX], [test x$userdefine_gethostbyname_r = xtrue])
+AM_COND_IF([NON_LINUX],
+	[AC_DEFINE([NON_LINUX], [1], [Get HostOS Type])])
+
+
 # AC_CONFIG_FILES([openbsd-compat/Makefile])
 
 AC_CONFIG_FILES([Makefile
-		 openbsd-compat/Makefile
-		 bgpctl/Makefile
-                 bgpd/Makefile])
+	openbsd-compat/Makefile
+	bgpctl/Makefile
+	bgpd/Makefile])
 AC_OUTPUT

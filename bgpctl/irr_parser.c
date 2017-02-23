@@ -27,6 +27,10 @@
 
 #include "irrfilter.h"
 
+#if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+typedef unsigned long ulong;
+#endif
+
 #define PARSEBUF_INCREMENT 4096
 
 int	 lineno;

@@ -38,6 +38,57 @@
 #include "parser.h"
 #include "irrfilter.h"
 
+#if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#include <sys/time.h>
+#include <mach/mach_time.h>
+/*
+ * POSIX timer replacement.
+ * It really just do the minimum we need for xfs_repair.
+ * Also, as setitimer can't create multiple timers,
+ * the timerid things are useless - we have only one ITIMER_REAL
+ * timer.
+ */
+#define CLOCK_REALTIME ITIMER_REAL
+#define itimerspec itimerval
+typedef uint64_t timer_t;
+typedef double   timer_c;
+typedef clock_id_t clockid_t;
+
+
+static inline int timer_create (clockid_t __clock_id,
+                         struct sigevent *__restrict __evp,
+                         timer_t *__restrict timer)
+{
+	// set something, to initialize the variable, just in case
+	*timer = 0;
+	return 0;
+}
+
+static inline int timer_settime (timer_t timerid, int flags,
+                          const struct itimerspec *__restrict timerspec,
+                          struct itimerspec *__restrict ovalue)
+{
+	return setitimer(ITIMER_REAL, timerspec, ovalue);
+}
+
+static inline int timer_delete (timer_t timerid)
+{
+	struct itimerspec timespec;
+
+	timespec.it_interval.tv_sec=0;
+	timespec.it_interval.tv_usec=0;
+	timespec.it_value.tv_sec=0;
+	timespec.it_value.tv_usec=0;
+
+	return setitimer(ITIMER_REAL, &timespec, NULL);
+}
+
+static inline int timer_gettime (timer_t timerid, struct itimerspec *value)
+{
+	return getitimer(ITIMER_REAL, value);
+}
+#endif
+
 enum neighbor_views {
 	NV_DEFAULT,
 	NV_TIMERS
@@ -89,8 +140,7 @@ struct rde_memstats	rdemem;
 
 struct imsgbuf	*ibuf;
 
-void
-usage(void)
+void usage(void)
 {
 	extern char	*__progname;
 
@@ -99,8 +149,7 @@ usage(void)
 	exit(1);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	struct sockaddr_un	 sun;
 	int			 fd, n, done, ch, nodescr = 0;
@@ -391,8 +440,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-char *
-fmt_peer(const char *descr, const struct bgpd_addr *remote_addr,
+char *fmt_peer(const char *descr, const struct bgpd_addr *remote_addr,
     int masklen, int nodescr)
 {
 	const char	*ip;
@@ -417,15 +465,13 @@ fmt_peer(const char *descr, const struct bgpd_addr *remote_addr,
 	return (p);
 }
 
-void
-show_summary_head(void)
+void show_summary_head(void)
 {
 	printf("%-20s %8s %10s %10s %5s %-8s %s\n", "Neighbor", "AS",
 	    "MsgRcvd", "MsgSent", "OutQ", "Up/Down", "State/PrfRcvd");
 }
 
-int
-show_summary_msg(struct imsg *imsg, int nodescr)
+int show_summary_msg(struct imsg *imsg, int nodescr)
 {
 	struct peer		*p;
 	char			*s;
@@ -467,8 +513,7 @@ show_summary_msg(struct imsg *imsg, int nodescr)
 	return (0);
 }
 
-int
-show_summary_terse_msg(struct imsg *imsg, int nodescr)
+int show_summary_terse_msg(struct imsg *imsg, int nodescr)
 {
 	struct peer		*p;
 	char			*s;
@@ -491,8 +536,7 @@ show_summary_terse_msg(struct imsg *imsg, int nodescr)
 	return (0);
 }
 
-int
-show_neighbor_terse(struct imsg *imsg)
+int show_neighbor_terse(struct imsg *imsg)
 {
 	struct peer		*p;
 
@@ -521,13 +565,12 @@ show_neighbor_terse(struct imsg *imsg)
 	return (0);
 }
 
-int
-show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
+int show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 {
 	struct peer		*p;
 	struct ctl_timer	*t;
-	struct in_addr		 ina;
-	char			 buf[NI_MAXHOST], pbuf[NI_MAXSERV], *s;
+	struct in_addr	ina;
+	char	buf[NI_MAXHOST], pbuf[NI_MAXSERV], *s;
 
 	switch (imsg->hdr.type) {
 	case IMSG_CTL_SHOW_NEIGHBOR:
@@ -594,34 +637,32 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			break;
 		print_neighbor_msgstats(p);
 		printf("\n");
- 		if (p->state == STATE_IDLE) {
- 			static const char	*errstr;
+		if (p->state == STATE_IDLE) {
+			static const char	*errstr;
 
- 			errstr = get_errstr(p->stats.last_sent_errcode,
- 			    p->stats.last_sent_suberr);
- 			if (errstr)
- 				printf("  Last error: %s\n\n", errstr);
- 		} else {
- 			if (getnameinfo((struct sockaddr *)&p->sa_local,
- 			    SS_LEN((socklen_t)p->sa_local),
- 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
- 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
- 				strlcpy(buf, "(unknown)", sizeof(buf));
- 				strlcpy(pbuf, "", sizeof(pbuf));
- 			}
- 			printf("  Local host:  %20s, Local port:  %5s\n", buf,
- 			    pbuf);
+			errstr = get_errstr(p->stats.last_sent_errcode,
+			    p->stats.last_sent_suberr);
+			if (errstr)
+				printf("  Last error: %s\n\n", errstr);
+		} else {
+			if(getnameinfo((struct sockaddr *)&p->sa_local, 
+				(socklen_t)p->sa_local.ss_len, buf, sizeof(buf), 
+				pbuf, sizeof(pbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+				strlcpy(buf, "(unknown)", sizeof(buf));
+				strlcpy(pbuf, "", sizeof(pbuf));
+			}
+			printf("  Local host:  %20s, Local port:  %5s\n", buf,
+			    pbuf);
  
- 			if (getnameinfo((struct sockaddr *)&p->sa_remote,
- 			    SS_LEN((socklen_t)p->sa_remote),
- 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
- 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
- 				strlcpy(buf, "(unknown)", sizeof(buf));
- 				strlcpy(pbuf, "", sizeof(pbuf));
- 			}
- 			printf("  Remote host: %20s, Remote port: %5s\n", buf,
- 			    pbuf);
- 			printf("\n");
+			if(getnameinfo((struct sockaddr *)&p->sa_remote, 
+				(socklen_t)p->sa_remote.ss_len, buf, sizeof(buf), 
+				pbuf, sizeof(pbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+				strlcpy(buf, "(unknown)", sizeof(buf));
+				strlcpy(pbuf, "", sizeof(pbuf));
+			}
+			printf("  Remote host: %20s, Remote port: %5s\n", buf,
+			    pbuf);
+			printf("\n");
 		}
 		break;
 	case IMSG_CTL_SHOW_TIMER:

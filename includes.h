@@ -77,4 +77,37 @@ static /**/const char *const rcsid[] = { (char *)rcsid, "\100(#)" msg }
 #endif
 #include "openbsd-compat/openbsd-compat.h"
 
+#if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#include <errno.h>
+#define XSPERR(x) ((x == 0) ? -1 : -x)
+
+static int setresgid(gid_t r, gid_t e, gid_t x)
+{
+   if (setgid(r) == -1)
+      return XSPERR(errno);
+   return setegid(e);
+}
+
+static int setresuid(uid_t r, uid_t e, uid_t x)
+{
+   if (setuid(r) == -1)
+      return XSPERR(errno);
+   return seteuid(e);
+}
+
+static int getresgid(gid_t *r, gid_t *e, gid_t *x)
+{
+  *r = getgid();
+  *e = getegid();
+  return 0;
+}
+
+static int getresuid(uid_t *r, uid_t *e, uid_t *x)
+{
+  *r = getuid();
+  *e = geteuid();
+  return 0;
+}
+#endif
+
 #endif /* OPENBGPD_INCLUDES_H */
