@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "irrfilter.h"
 
@@ -85,6 +86,7 @@ parse_response(FILE *f, enum qtype qtype)
 				return (-1);
 			break;
 		case QTYPE_ROUTE:
+		case QTYPE_ROUTE6:
 			if ((n = parse_route(key, val)) == -1)
 				return (-1);
 			break;
@@ -234,20 +236,22 @@ parse_policy(char *key, char *val)
 	while ((tok = strsep(&val, " ")) != NULL) {
 		nextst = PO_NONE;
 		if (dir == IMPORT) {
-			if (!strcmp(tok, "from"))
+			if (!strcasecmp(tok, "from"))
 				nextst = PO_PEER_KEY;
-			else if (!strcmp(tok, "at"))
+			else if (!strcasecmp(tok, "at"))
 				nextst = PO_RTR_KEY;
-			else if (!strcmp(tok, "action"))
+			else if (!strcasecmp(tok, "action"))
 				nextst = PO_ACTION_KEY;
-			else if (!strcmp(tok, "accept"))
+			else if (!strcasecmp(tok, "accept"))
 				nextst = PO_FILTER_KEY;
 		} else if (dir == EXPORT) {
-			if (!strcmp(tok, "to"))
+			if (!strcasecmp(tok, "to"))
 				nextst = PO_PEER_KEY;
-			else if (!strcmp(tok, "at"))
+			else if (!strcasecmp(tok, "at"))
 				nextst = PO_RTR_KEY;
-			else if (!strcmp(tok, "announce"))
+			else if (!strcasecmp(tok, "action"))
+				nextst = PO_ACTION_KEY;
+			else if (!strcasecmp(tok, "announce"))
 				nextst = PO_FILTER_KEY;
 		}
 
@@ -282,10 +286,10 @@ parse_policy(char *key, char *val)
 					goto ppoerr;
 				if (strlen(tok) < 3 ||
 				    strncasecmp(tok, "AS", 2) ||
-				    !isdigit(tok[2]))
+				    !isdigit((unsigned char)tok[2]))
 					errx(1, "peering spec \"%s\": format "
 					    "error, AS expected", tok);
-				pi->peer_as = strtonum(tok + 2, 1, USHRT_MAX,
+				pi->peer_as = strtonum(tok + 2, 1, UINT_MAX,
 				    &errstr);
 				if (errstr)
 					errx(1, "peering spec \"%s\": format "
@@ -411,11 +415,13 @@ parse_asset(char *key, char *val)
 int
 parse_route(char *key, char *val)
 {
-	if (strcmp(key, "route"))	/* ignore everything else */
+	if (strcmp(key, "route") && strcmp(key, "route6"))
+		/* ignore everything else */
 		return (0);
 
-	/* route is single-value, but seen trailing , in the wild */
-	if (strlen(val) > 0 && val[strlen(val) - 1] == ',')
+	/* route is single-value, but seen trailing , and \r in the wild */
+	if (strlen(val) > 0 && (val[strlen(val) - 1] == ',' ||
+	    val[strlen(val) - 1] == '\r'))
 		val[strlen(val) - 1] = '\0';
 
 	return (prefixset_addmember(val));

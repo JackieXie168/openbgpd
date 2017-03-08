@@ -1,4 +1,4 @@
-/*	$OpenBSD: log.h,v 1.10 2007/12/23 18:26:13 henning Exp $ */
+/*	$OpenBSD: log.h,v 1.19 2017/01/24 04:22:42 benno Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -16,108 +16,31 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-static const char * const statenames[] = {
-	"None",
-	"Idle",
-	"Connect",
-	"Active",
-	"OpenSent",
-	"OpenConfirm",
-	"Established"
-};
+#ifndef LOG_H
+#define LOG_H
 
-static const char * const eventnames[] = {
-	"None",
-	"Start",
-	"Stop",
-	"Connection opened",
-	"Connection closed",
-	"Connection open failed",
-	"Fatal error",
-	"ConnectRetryTimer expired",
-	"HoldTimer expired",
-	"KeepaliveTimer expired",
-	"OPEN message received",
-	"KEEPALIVE message received",
-	"UPDATE message received",
-	"NOTIFICATION received"
-};
+#include <stdarg.h>
+#include <sys/cdefs.h>
 
-static const char * const errnames[] = {
-	"none",
-	"Header error",
-	"error in OPEN message",
-	"error in UPDATE message",
-	"HoldTimer expired",
-	"Finite State Machine error",
-	"Cease"
-};
+void	log_init(int, int);
+void	log_procinit(const char *);
+void	log_setverbose(int);
+int	log_getverbose(void);
+void	log_warn(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
+void	log_warnx(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
+void	log_info(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
+void	log_debug(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
+void	logit(int, const char *, ...)
+	    __attribute__((__format__ (printf, 2, 3)));
+void	vlog(int, const char *, va_list)
+	    __attribute__((__format__ (printf, 2, 0)));
+__dead void fatal(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
+__dead void fatalx(const char *, ...)
+	    __attribute__((__format__ (printf, 1, 2)));
 
-static const char * const suberr_header_names[] = {
-	"none",
-	"synchronization error",
-	"wrong length",
-	"unknown message type"
-};
-
-static const char * const suberr_open_names[] = {
-	"none",
-	"version mismatch",
-	"AS unacceptable",
-	"BGPID invalid",
-	"optional parameter error",
-	"authentication error",
-	"unacceptable holdtime",
-	"unsupported capability"
-};
-
-static const char * const suberr_update_names[] = {
-	"none",
-	"attribute list error",
-	"unknown well-known attribute",
-	"well-known attribute missing",
-	"attribute flags error",
-	"attribute length wrong",
-	"origin unacceptable",
-	"loop detected",
-	"nexthop unacceptable",
-	"optional attribute error",
-	"network unacceptable",
-	"AS-Path unacceptable"
-};
-
-static const char * const suberr_cease_names[] = {
-	"none",
-	"max-prefix exceeded",
-	"administratively down",
-	"peer unconfigured",
-	"administrative reset",
-	"connection rejected",
-	"other config change",
-	"collision",
-	"resource exhaustion"
-};
-
-static const char * const procnames[] = {
-	"parent",
-	"SE",
-	"RDE"
-};
-
-static const char * const ctl_res_strerror[] = {
-	"no error",
-	"no such neighbor",
-	"permission denied",
-	"neighbor does not have this capability",
-	"config file has errors, reload failed"
-};
-
-static const char * const timernames[] = {
-	"None",
-	"ConnectRetryTimer",
-	"KeepaliveTimer",
-	"HoldTimer",
-	"IdleHoldTimer",
-	"IdleHoldResetTimer",
-	""
-};
+#endif /* LOG_H */

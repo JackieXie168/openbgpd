@@ -1,7 +1,9 @@
-/*	$OpenBSD: rde_attr.c,v 1.79 2009/03/19 06:52:59 claudio Exp $ */
+/*	$OpenBSD: rde_attr.c,v 1.97 2017/01/24 04:22:42 benno Exp $ */
 
 /*
  * Copyright (c) 2004 Claudio Jeker <claudio@openbsd.org>
+ * Copyright (c) 2016 Job Snijders <job@instituut.net>
+ * Copyright (c) 2016 Peter Hessler <phessler@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,13 +24,16 @@
 
 #include <netinet/in.h>
 
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <siphash.h>
 
 #include "sys-queue.h"
 #include "bgpd.h"
 #include "rde.h"
+#include "log.h"
 
 int
 attr_write(void *p, u_int16_t p_len, u_int8_t flags, u_int8_t type,
@@ -37,12 +42,12 @@ attr_write(void *p, u_int16_t p_len, u_int8_t flags, u_int8_t type,
 	u_char		*b = p;
 	u_int16_t	 tmp, tot_len = 2; /* attribute header (without len) */
 
+	flags &= ~ATTR_DEFMASK;
 	if (data_len > 255) {
 		tot_len += 2 + data_len;
 		flags |= ATTR_EXTLEN;
 	} else {
 		tot_len += 1 + data_len;
-		flags &= ~ATTR_EXTLEN;
 	}
 
 	if (tot_len > p_len)
@@ -64,26 +69,26 @@ attr_write(void *p, u_int16_t p_len, u_int8_t flags, u_int8_t type,
 }
 
 int
-attr_writebuf(struct buf *buf, u_int8_t flags, u_int8_t type, void *data,
+attr_writebuf(struct ibuf *buf, u_int8_t flags, u_int8_t type, void *data,
     u_int16_t data_len)
 {
 	u_char	hdr[4];
 
+	flags &= ~ATTR_DEFMASK;
 	if (data_len > 255) {
 		flags |= ATTR_EXTLEN;
 		hdr[2] = (data_len >> 8) & 0xff;
 		hdr[3] = data_len & 0xff;
 	} else {
-		flags &= ~ATTR_EXTLEN;
 		hdr[2] = data_len & 0xff;
 	}
 
 	hdr[0] = flags;
 	hdr[1] = type;
 
-	if (buf_add(buf, hdr, flags & ATTR_EXTLEN ? 4 : 3) == -1)
+	if (ibuf_add(buf, hdr, flags & ATTR_EXTLEN ? 4 : 3) == -1)
 		return (-1);
-	if (buf_add(buf, data, data_len) == -1)
+	if (ibuf_add(buf, data, data_len) == -1)
 		return (-1);
 	return (0);
 }
@@ -99,6 +104,8 @@ struct attr_table {
 	u_int32_t		 hashmask;
 } attrtable;
 
+SIPHASH_KEY attrtablekey;
+
 #define ATTR_HASH(x)				\
 	&attrtable.hashtbl[(x) & attrtable.hashmask]
 
@@ -107,6 +114,7 @@ attr_init(u_int32_t hashsize)
 {
 	u_int32_t	hs, i;
 
+	arc4random_buf(&attrtablekey, sizeof(attrtablekey));
 	for (hs = 1; hs < hashsize; hs <<= 1)
 		;
 	attrtable.hashtbl = calloc(hs, sizeof(struct attr_list));
@@ -147,8 +155,11 @@ attr_optadd(struct rde_aspath *asp, u_int8_t flags, u_int8_t type,
 	for (l = 0; l < asp->others_len; l++) {
 		if (asp->others[l] == NULL)
 			break;
-		if (type == asp->others[l]->type)
+		if (type == asp->others[l]->type) {
+			if (a->refcnt == 0)
+				attr_put(a);
 			return (-1);
+		}
 	}
 
 	/* add attribute to the table but first bump refcnt */
@@ -173,8 +184,8 @@ attr_optadd(struct rde_aspath *asp, u_int8_t flags, u_int8_t type,
 		fatalx("attr_optadd: others_len overflow");
 
 	asp->others_len++;
-	if ((p = realloc(asp->others,
-	    asp->others_len * sizeof(struct attr *))) == NULL)
+	if ((p = reallocarray(asp->others,
+	    asp->others_len, sizeof(struct attr *))) == NULL)
 		fatal("attr_optadd");
 	asp->others = p;
 
@@ -313,16 +324,16 @@ struct attr *
 attr_alloc(u_int8_t flags, u_int8_t type, const void *data, u_int16_t len)
 {
 	struct attr	*a;
+	SIPHASH_CTX	ctx;
 
 	a = calloc(1, sizeof(struct attr));
 	if (a == NULL)
 		fatal("attr_optadd");
 	rdemem.attr_cnt++;
 
+	flags &= ~ATTR_DEFMASK;	/* normalize mask */
 	a->flags = flags;
-	a->hash = hash32_buf(&flags, sizeof(flags), HASHINIT);
 	a->type = type;
-	a->hash = hash32_buf(&type, sizeof(type), a->hash);
 	a->len = len;
 	if (len != 0) {
 		if ((a->data = malloc(len)) == NULL)
@@ -334,8 +345,12 @@ attr_alloc(u_int8_t flags, u_int8_t type, const void *data, u_int16_t len)
 	} else
 		a->data = NULL;
 
-	a->hash = hash32_buf(&len, sizeof(len), a->hash);
-	a->hash = hash32_buf(a->data, a->len, a->hash);
+	SipHash24_Init(&ctx, &attrtablekey);
+	SipHash24_Update(&ctx, &flags, sizeof(flags));
+	SipHash24_Update(&ctx, &type, sizeof(type));
+	SipHash24_Update(&ctx, &len, sizeof(len));
+	SipHash24_Update(&ctx, a->data, a->len);
+	a->hash = SipHash24_End(&ctx);
 	LIST_INSERT_HEAD(ATTR_HASH(a->hash), a, entry);
 
 	return (a);
@@ -347,11 +362,16 @@ attr_lookup(u_int8_t flags, u_int8_t type, const void *data, u_int16_t len)
 	struct attr_list	*head;
 	struct attr		*a;
 	u_int32_t		 hash;
+	SIPHASH_CTX		ctx;
 
-	hash = hash32_buf(&flags, sizeof(flags), HASHINIT);
-	hash = hash32_buf(&type, sizeof(type), hash);
-	hash = hash32_buf(&len, sizeof(len), hash);
-	hash = hash32_buf(data, len, hash);
+	flags &= ~ATTR_DEFMASK;	/* normalize mask */
+
+	SipHash24_Init(&ctx, &attrtablekey);
+	SipHash24_Update(&ctx, &flags, sizeof(flags));
+	SipHash24_Update(&ctx, &type, sizeof(type));
+	SipHash24_Update(&ctx, &len, sizeof(len));
+	SipHash24_Update(&ctx, data, len);
+	hash = SipHash24_End(&ctx);
 	head = ATTR_HASH(hash);
 
 	LIST_FOREACH(a, head, entry) {
@@ -397,6 +417,8 @@ struct aspath_table {
 	u_int32_t		 hashmask;
 } astable;
 
+SIPHASH_KEY astablekey;
+
 #define ASPATH_HASH(x)				\
 	&astable.hashtbl[(x) & astable.hashmask]
 
@@ -406,6 +428,7 @@ aspath_verify(void *data, u_int16_t len, int as4byte)
 	u_int8_t	*seg = data;
 	u_int16_t	 seg_size, as_size = 2;
 	u_int8_t	 seg_len, seg_type;
+	int		 error = 0;
 
 	if (len & 1)
 		/* odd length aspath are invalid */
@@ -420,7 +443,15 @@ aspath_verify(void *data, u_int16_t len, int as4byte)
 		seg_type = seg[0];
 		seg_len = seg[1];
 
-		if (seg_type != AS_SET && seg_type != AS_SEQUENCE)
+		/*
+		 * BGP confederations should not show up but consider them
+		 * as a soft error which invalidates the path but keeps the
+		 * bgp session running.
+		 */
+		if (seg_type == AS_CONFED_SEQUENCE || seg_type == AS_CONFED_SET)
+			error = AS_ERR_SOFT;
+		if (seg_type != AS_SET && seg_type != AS_SEQUENCE &&
+		    seg_type != AS_CONFED_SEQUENCE && seg_type != AS_CONFED_SET)
 			return (AS_ERR_TYPE);
 
 		seg_size = 2 + as_size * seg_len;
@@ -432,7 +463,7 @@ aspath_verify(void *data, u_int16_t len, int as4byte)
 			/* empty aspath segments are not allowed */
 			return (AS_ERR_BAD);
 	}
-	return (0);	/* aspath is valid but probably not loop free */
+	return (error);	/* aspath is valid but probably not loop free */
 }
 
 void
@@ -450,6 +481,7 @@ aspath_init(u_int32_t hashsize)
 		LIST_INIT(&astable.hashtbl[i]);
 
 	astable.hashmask = hs - 1;
+	arc4random_buf(&astablekey, sizeof(astablekey));
 }
 
 void
@@ -486,8 +518,8 @@ aspath_get(void *data, u_int16_t len)
 		memcpy(aspath->data, data, len);
 
 		/* link */
-		head = ASPATH_HASH(hash32_buf(aspath->data, aspath->len,
-		    HASHINIT));
+		head = ASPATH_HASH(SipHash24(&astablekey, aspath->data,
+		    aspath->len));
 		LIST_INSERT_HEAD(head, aspath, entry);
 	}
 	aspath->refcnt++;
@@ -763,15 +795,9 @@ aspath_countcopy(struct aspath *aspath, u_int16_t cnt, u_int8_t *buf,
 u_int32_t
 aspath_neighbor(struct aspath *aspath)
 {
-	/*
-	 * Empty aspath is OK -- internal as route.
-	 * But what is the neighbor? For now let's return 0.
-	 * That should not break anything.
-	 */
-
+	/* Empty aspath is OK -- internal AS route. */
 	if (aspath->len == 0)
-		return (0);
-
+		return (rde_local_as());
 	return (aspath_extract(aspath->data, 0));
 }
 
@@ -780,11 +806,10 @@ aspath_loopfree(struct aspath *aspath, u_int32_t myAS)
 {
 	u_int8_t	*seg;
 	u_int16_t	 len, seg_size;
-	u_int8_t	 i, seg_len, seg_type;
+	u_int8_t	 i, seg_len;
 
 	seg = aspath->data;
 	for (len = aspath->len; len > 0; len -= seg_size, seg += seg_size) {
-		seg_type = seg[0];
 		seg_len = seg[1];
 		seg_size = 2 + sizeof(u_int32_t) * seg_len;
 
@@ -823,7 +848,7 @@ aspath_lookup(const void *data, u_int16_t len)
 	struct aspath		*aspath;
 	u_int32_t		 hash;
 
-	hash = hash32_buf(data, len, HASHINIT);
+	hash = SipHash24(&astablekey, data, len);
 	head = ASPATH_HASH(hash);
 
 	LIST_FOREACH(aspath, head, entry) {
@@ -911,76 +936,62 @@ aspath_prepend(struct aspath *asp, u_int32_t as, int quantum, u_int16_t *len)
 	return (p);
 }
 
-/* we need to be able to search more than one as */
 int
-aspath_match(struct aspath *a, enum as_spec type, u_int32_t as)
+aspath_lenmatch(struct aspath *a, enum aslen_spec type, u_int aslen)
 {
 	u_int8_t	*seg;
-	int		 final;
+	u_int32_t	 as, lastas = 0;
+	u_int		 count = 0;
 	u_int16_t	 len, seg_size;
-	u_int8_t	 i, seg_type, seg_len;
+	u_int8_t	 i, seg_len;
 
-	if (type == AS_EMPTY) {
-		if (a->len == 0)
+	if (type == ASLEN_MAX) {
+		if (aslen < aspath_count(a->data, a->len))
 			return (1);
 		else
 			return (0);
 	}
 
-	final = 0;
+	/* type == ASLEN_SEQ */
 	seg = a->data;
 	for (len = a->len; len > 0; len -= seg_size, seg += seg_size) {
-		seg_type = seg[0];
 		seg_len = seg[1];
 		seg_size = 2 + sizeof(u_int32_t) * seg_len;
 
-		final = (len == seg_size);
-
-		/* just check the first (leftmost) AS */
-		if (type == AS_PEER) {
-			if (as == aspath_extract(seg, 0))
-				return (1);
-			else
-				return (0);
-		}
-		/* just check the final (rightmost) AS */
-		if (type == AS_SOURCE) {
-			/* not yet in the final segment */
-			if (!final)
-				continue;
-
-			if (as == aspath_extract(seg, seg_len - 1))
-				return (1);
-			else
-				return (0);
-		}
-
-		/* AS_TRANSIT or AS_ALL */
 		for (i = 0; i < seg_len; i++) {
-			if (as == aspath_extract(seg, i)) {
-				/*
-				 * the source (rightmost) AS is excluded from
-				 * AS_TRANSIT matches.
-				 */
-				if (final && i == seg_len - 1 &&
-				    type == AS_TRANSIT)
-					return (0);
-				return (1);
-			}
+			/* what should we do with AS_SET? */
+			as = aspath_extract(seg, i);
+			if (as == lastas) {
+				if (aslen < ++count)
+					return (1);
+			} else
+				count = 1;
+			lastas = as;
 		}
 	}
 	return (0);
 }
 
+/*
+ * Functions handling communities and extended communities.
+ */
+
+int community_ext_matchone(struct filter_extcommunity *, u_int16_t, u_int64_t);
+
 int
-community_match(void *data, u_int16_t len, int as, int type)
+community_match(struct rde_aspath *asp, int as, int type)
 {
-	u_int8_t	*p = data;
-	u_int16_t	 eas, etype;
+	struct attr	*a;
+	u_int8_t	*p;
+	u_int16_t	 eas, etype, len;
 
-	len >>= 2; /* divide by four */
+	a = attr_optget(asp, ATTR_COMMUNITIES);
+	if (a == NULL)
+		/* no communities, no match */
+		return (0);
 
-	for (; len > 0; len--) {
+	p = a->data;
+	for (len = a->len / 4; len > 0; len--) {
 		eas = *p++;
 		eas <<= 8;
 		eas |= *p++;
@@ -1001,12 +1012,11 @@ community_set(struct rde_aspath *asp, int as, int type)
 	u_int8_t	*p = NULL;
 	unsigned int	 i, ncommunities = 0;
 	u_int8_t	 f = ATTR_OPTIONAL|ATTR_TRANSITIVE;
-	u_int8_t	 t = ATTR_COMMUNITIES;
 
 	attr = attr_optget(asp, ATTR_COMMUNITIES);
 	if (attr != NULL) {
 		p = attr->data;
-		ncommunities = attr->len >> 2; /* divide by four */
+		ncommunities = attr->len / 4;
 	}
 
 	/* first check if the community is not already set */
@@ -1018,11 +1028,11 @@ community_set(struct rde_aspath *asp, int as, int type)
 		p += 4;
 	}
 
-	if (ncommunities++ >= 0x3fff)
+	if (ncommunities++ >= USHRT_MAX / 4)
 		/* overflow */
 		return (0);
 
-	if ((p = malloc(ncommunities << 2)) == NULL)
+	if ((p = reallocarray(NULL, ncommunities, 4)) == NULL)
 		fatal("community_set");
 
 	p[0] = as >> 8;
@@ -1033,11 +1043,10 @@ community_set(struct rde_aspath *asp, int as, int type)
 	if (attr != NULL) {
 		memcpy(p + 4, attr->data, attr->len);
 		f = attr->flags;
-		t = attr->type;
 		attr_free(asp, attr);
 	}
 
-	attr_optadd(asp, f, t, p, ncommunities << 2);
+	attr_optadd(asp, f, ATTR_COMMUNITIES, p, ncommunities * 4);
 
 	free(p);
 	return (1);
@@ -1050,7 +1059,7 @@ community_delete(struct rde_aspath *asp, int as, int type)
 	u_int8_t	*p, *n;
 	u_int16_t	 l, len = 0;
 	u_int16_t	 eas, etype;
-	u_int8_t	 f, t;
+	u_int8_t	 f;
 
 	attr = attr_optget(asp, ATTR_COMMUNITIES);
 	if (attr == NULL)
@@ -1101,10 +1110,394 @@ community_delete(struct rde_aspath *asp, int as, int type)
 	}
 
 	f = attr->flags;
-	t = attr->type;
 
 	attr_free(asp, attr);
-	attr_optadd(asp, f, t, n, len);
+	attr_optadd(asp, f, ATTR_COMMUNITIES, n, len);
 	free(n);
 }
 
+int
+community_ext_match(struct rde_aspath *asp, struct filter_extcommunity *c,
+    u_int16_t neighas)
+{
+	struct attr	*attr;
+	u_int8_t	*p;
+	u_int64_t	 ec;
+	u_int16_t	 len;
+
+	attr = attr_optget(asp, ATTR_EXT_COMMUNITIES);
+	if (attr == NULL)
+		/* no communities, no match */
+		return (0);
+
+	p = attr->data;
+	for (len = attr->len / sizeof(ec); len > 0; len--) {
+		memcpy(&ec, p, sizeof(ec));
+		if (community_ext_matchone(c, neighas, ec))
+			return (1);
+		p += sizeof(ec);
+	}
+
+	return (0);
+}
+
+int
+community_ext_set(struct rde_aspath *asp, struct filter_extcommunity *c,
+    u_int16_t neighas)
+{
+	struct attr	*attr;
+	u_int8_t	*p = NULL;
+	u_int64_t	 community;
+	unsigned int	 i, ncommunities = 0;
+	u_int8_t	 f = ATTR_OPTIONAL|ATTR_TRANSITIVE;
+
+	if (community_ext_conv(c, neighas, &community))
+		return (0);
+
+	attr = attr_optget(asp, ATTR_EXT_COMMUNITIES);
+	if (attr != NULL) {
+		p = attr->data;
+		ncommunities = attr->len / sizeof(community);
+	}
+
+	/* first check if the community is not already set */
+	for (i = 0; i < ncommunities; i++) {
+		if (memcmp(&community, p, sizeof(community)) == 0)
+			/* already present, nothing todo */
+			return (1);
+		p += sizeof(community);
+	}
+
+	if (ncommunities++ >= USHRT_MAX / sizeof(community))
+		/* overflow */
+		return (0);
+
+	if ((p = reallocarray(NULL, ncommunities, sizeof(community))) == NULL)
+		fatal("community_ext_set");
+
+	memcpy(p, &community, sizeof(community));
+	if (attr != NULL) {
+		memcpy(p + sizeof(community), attr->data, attr->len);
+		f = attr->flags;
+		attr_free(asp, attr);
+	}
+
+	attr_optadd(asp, f, ATTR_EXT_COMMUNITIES, p,
+	    ncommunities * sizeof(community));
+
+	free(p);
+	return (1);
+}
+
+void
+community_ext_delete(struct rde_aspath *asp, struct filter_extcommunity *c,
+    u_int16_t neighas)
+{
+	struct attr	*attr;
+	u_int8_t	*p, *n;
+	u_int64_t	 community;
+	u_int16_t	 l, len = 0;
+	u_int8_t	 f;
+
+	if (community_ext_conv(c, neighas, &community))
+		return;
+
+	attr = attr_optget(asp, ATTR_EXT_COMMUNITIES);
+	if (attr == NULL)
+		/* no attr nothing to do */
+		return;
+
+	p = attr->data;
+	for (l = 0; l < attr->len; l += sizeof(community)) {
+		if (memcmp(&community, p + l, sizeof(community)) == 0)
+			/* match */
+			continue;
+		len += sizeof(community);
+	}
+
+	if (len == 0) {
+		attr_free(asp, attr);
+		return;
+	}
+
+	if ((n = malloc(len)) == NULL)
+		fatal("community_delete");
+
+	p = attr->data;
+	for (l = 0; l < len && p < attr->data + attr->len;
+	    p += sizeof(community)) {
+		if (memcmp(&community, p, sizeof(community)) == 0)
+			/* match */
+			continue;
+		memcpy(n + l, p, sizeof(community));
+		l += sizeof(community);
+	}
+
+	f = attr->flags;
+
+	attr_free(asp, attr);
+	attr_optadd(asp, f, ATTR_EXT_COMMUNITIES, n, len);
+	free(n);
+}
+
+int
+community_ext_conv(struct filter_extcommunity *c, u_int16_t neighas,
+    u_int64_t *community)
+{
+	u_int64_t	com;
+	u_int32_t	ip;
+
+	com = (u_int64_t)c->type << 56;
+	switch (c->type & EXT_COMMUNITY_VALUE) {
+	case EXT_COMMUNITY_TWO_AS:
+		com |= (u_int64_t)c->subtype << 48;
+		com |= (u_int64_t)c->data.ext_as.as << 32;
+		com |= c->data.ext_as.val;
+		break;
+	case EXT_COMMUNITY_IPV4:
+		com |= (u_int64_t)c->subtype << 48;
+		ip = ntohl(c->data.ext_ip.addr.s_addr);
+		com |= (u_int64_t)ip << 16;
+		com |= c->data.ext_ip.val;
+		break;
+	case EXT_COMMUNITY_FOUR_AS:
+		com |= (u_int64_t)c->subtype << 48;
+		com |= (u_int64_t)c->data.ext_as4.as4 << 16;
+		com |= c->data.ext_as4.val;
+		break;
+	case EXT_COMMUNITY_OPAQUE:
+		com |= (u_int64_t)c->subtype << 48;
+		com |= c->data.ext_opaq & EXT_COMMUNITY_OPAQUE_MAX;
+		break;
+	default:
+		com |= c->data.ext_opaq & 0xffffffffffffffULL;
+		break;
+	}
+
+	*community = htobe64(com);
+
+	return (0);
+}
+
+int
+community_ext_matchone(struct filter_extcommunity *c, u_int16_t neighas,
+    u_int64_t community)
+{
+	u_int64_t	com, mask;
+	u_int32_t	ip;
+
+	community = betoh64(community);
+
+	com = (u_int64_t)c->type << 56;
+	mask = 0xffULL << 56;
+	if ((com & mask) != (community & mask))
+		return (0);
+
+	switch (c->type & EXT_COMMUNITY_VALUE) {
+	case EXT_COMMUNITY_TWO_AS:
+	case EXT_COMMUNITY_IPV4:
+	case EXT_COMMUNITY_FOUR_AS:
+	case EXT_COMMUNITY_OPAQUE:
+		com = (u_int64_t)c->subtype << 48;
+		mask = 0xffULL << 48;
+		if ((com & mask) != (community & mask))
+			return (0);
+		break;
+	default:
+		com = c->data.ext_opaq & 0xffffffffffffffULL;
+		mask = 0xffffffffffffffULL;
+		if ((com & mask) == (community & mask))
+			return (1);
+		return (0);
+	}
+
+
+	switch (c->type & EXT_COMMUNITY_VALUE) {
+	case EXT_COMMUNITY_TWO_AS:
+		com = (u_int64_t)c->data.ext_as.as << 32;
+		mask = 0xffffULL << 32;
+		if ((com & mask) != (community & mask))
+			return (0);
+
+		com = c->data.ext_as.val;
+		mask = 0xffffffffULL;
+		if ((com & mask) == (community & mask))
+			return (1);
+		break;
+	case EXT_COMMUNITY_IPV4:
+		ip = ntohl(c->data.ext_ip.addr.s_addr);
+		com = (u_int64_t)ip << 16;
+		mask = 0xffffffff0000ULL;
+		if ((com & mask) != (community & mask))
+			return (0);
+
+		com = c->data.ext_ip.val;
+		mask = 0xffff;
+		if ((com & mask) == (community & mask))
+			return (1);
+		break;
+	case EXT_COMMUNITY_FOUR_AS:
+		com = (u_int64_t)c->data.ext_as4.as4 << 16;
+		mask = 0xffffffffULL << 16;
+		if ((com & mask) != (community & mask))
+			return (0);
+
+		com = c->data.ext_as4.val;
+		mask = 0xffff;
+		if ((com & mask) == (community & mask))
+			return (1);
+		break;
+	case EXT_COMMUNITY_OPAQUE:
+		com = c->data.ext_opaq & EXT_COMMUNITY_OPAQUE_MAX;
+		mask = EXT_COMMUNITY_OPAQUE_MAX;
+		if ((com & mask) == (community & mask))
+			return (1);
+		break;
+	}
+
+	return (0);
+}
+
+int
+community_large_match(struct rde_aspath *asp, int64_t as, int64_t ld1,
+    int64_t ld2)
+{
+	struct wire_largecommunity	*bar;
+	struct attr	*a;
+	u_int8_t	*p;
+	u_int16_t	 len;
+	u_int32_t	 eas, eld1, eld2;
+
+	a = attr_optget(asp, ATTR_LARGE_COMMUNITIES);
+	if (a == NULL)
+		/* no communities, no match */
+		return (0);
+
+	p = a->data;
+	for (len = a->len / 12; len > 0; len--) {
+		bar = (struct wire_largecommunity *)p;
+		p += 12;
+		eas = betoh32(bar->as);
+		eld1 = betoh32(bar->ld1);
+		eld2 = betoh32(bar->ld2);
+
+		if ((as == COMMUNITY_ANY || as == eas) &&
+		    (ld1 == COMMUNITY_ANY || ld1 == eld1) &&
+		    (ld2 == COMMUNITY_ANY || ld2 == eld2))
+			return (1);
+	}
+	return (0);
+}
+
+int
+community_large_set(struct rde_aspath *asp, int64_t as, int64_t ld1,
+    int64_t ld2)
+{
+	struct wire_largecommunity	*bar;
+	struct attr	*attr;
+	u_int8_t	*p = NULL;
+	unsigned int	 i, ncommunities = 0;
+	u_int8_t	 f = ATTR_OPTIONAL|ATTR_TRANSITIVE;
+
+	attr = attr_optget(asp, ATTR_LARGE_COMMUNITIES);
+	if (attr != NULL) {
+		p = attr->data;
+		ncommunities = attr->len / 12;
+	}
+
+	/* first check if the community is not already set */
+	for (i = 0; i < ncommunities; i++) {
+		bar = (struct wire_largecommunity *)p;
+		if (bar->as == as && bar->ld1 == ld1 && bar->ld2 == ld2)
+			/* already present, nothing todo */
+			return (1);
+		p += 12;
+	}
+
+	if (ncommunities++ >= USHRT_MAX / 12)
+		/* overflow */
+		return (0);
+
+	if ((p = reallocarray(NULL, ncommunities, 12)) == NULL)
+		fatal("community_set");
+
+	bar = (struct wire_largecommunity *)p;
+	bar->as = htobe32(as);
+	bar->ld1 = htobe32(ld1);
+	bar->ld2 = htobe32(ld2);
+
+	if (attr != NULL) {
+		memcpy(p + 12, attr->data, attr->len);
+		f = attr->flags;
+		attr_free(asp, attr);
+	}
+
+	attr_optadd(asp, f, ATTR_LARGE_COMMUNITIES, p, ncommunities * 12);
+
+	free(p);
+	return (1);
+}
+
+void
+community_large_delete(struct rde_aspath *asp, int64_t as, int64_t ld1,
+    int64_t ld2)
+{
+	struct wire_largecommunity	*bar;
+	struct attr	*attr;
+	u_int8_t	*p, *n;
+	u_int16_t	 l = 0, len = 0;
+	u_int32_t	 eas, eld1, eld2;
+	u_int8_t	 f;
+
+	attr = attr_optget(asp, ATTR_LARGE_COMMUNITIES);
+	if (attr == NULL)
+		/* no attr nothing to do */
+		return;
+
+	p = attr->data;
+	for (len = 0; l < attr->len; l += 12) {
+		bar = (struct wire_largecommunity *)p;
+		p += 12;
+		eas = betoh32(bar->as);
+		eld1 = betoh32(bar->ld1);
+		eld2 = betoh32(bar->ld2);
+
+		if ((as == COMMUNITY_ANY || as == eas) &&
+		    (ld1 == COMMUNITY_ANY || ld1 == eld1) &&
+		    (ld2 == COMMUNITY_ANY || ld2 == eld2))
+			/* match */
+			continue;
+		len += 12;
+	}
+
+	if (len == 0) {
+		attr_free(asp, attr);
+		return;
+	}
+
+	if ((n = malloc(len)) == NULL)
+		fatal("community_delete");
+
+	p = attr->data;
+	for (l = 0; l < len && p < attr->data + attr->len; ) {
+		bar = (struct wire_largecommunity *)p;
+		p += 12;
+		eas = betoh32(bar->as);
+		eld1 = betoh32(bar->ld1);
+		eld2 = betoh32(bar->ld2);
+
+		if ((as == COMMUNITY_ANY || as == eas) &&
+		    (ld1 == COMMUNITY_ANY || ld1 == eld1) &&
+		    (ld2 == COMMUNITY_ANY || ld2 == eld2))
+			/* match */
+			continue;
+		memcpy(n + l, bar, sizeof(*bar));
+		l += 12;
+	}
+
+	f = attr->flags;
+
+	attr_free(asp, attr);
+	attr_optadd(asp, f, ATTR_LARGE_COMMUNITIES, n, len);
+	free(n);
+}

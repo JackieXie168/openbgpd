@@ -1,4 +1,4 @@
-/*	$OpenBSD: pftable.c,v 1.5 2005/07/01 09:19:24 claudio Exp $ */
+/*	$OpenBSD: pftable.c,v 1.10 2017/01/24 04:22:42 benno Exp $ */
 
 /*
  * Copyright (c) 2004 Damien Miller <djm@openbsd.org>
@@ -20,13 +20,67 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
+#include <netinet/in.h>
 #include <net/if.h>
+#if !(defined(darwin) || defined(__APPLE__) || defined(MACOSX))
 #include <net/pfvar.h>
+#else
+#include <sys/param.h>
+#define	PF_TABLE_NAME_SIZE	 32
+struct pfr_table {
+	char			 pfrt_anchor[MAXPATHLEN];
+	char			 pfrt_name[PF_TABLE_NAME_SIZE];
+	u_int32_t		 pfrt_flags;
+	u_int8_t		 pfrt_fback;
+};
 
+struct pfr_addr {
+	union {
+		struct in_addr		_pfra_ip4addr;
+		struct in6_addr	_pfra_ip6addr;
+	}		 pfra_u;
+	u_int8_t	 pfra_af;
+	u_int8_t	 pfra_net;
+	u_int8_t	 pfra_not;
+	u_int8_t	 pfra_fback;
+};
+
+enum { PFR_DIR_IN, PFR_DIR_OUT, PFR_DIR_MAX };
+enum { PFR_OP_BLOCK, PFR_OP_PASS, PFR_OP_ADDR_MAX, PFR_OP_TABLE_MAX };
+#define PFR_OP_XPASS	PFR_OP_ADDR_MAX
+
+struct pfr_astats {
+	struct pfr_addr	 pfras_a;
+	u_int64_t	 pfras_packets[PFR_DIR_MAX][PFR_OP_ADDR_MAX];
+	u_int64_t	 pfras_bytes[PFR_DIR_MAX][PFR_OP_ADDR_MAX];
+	u_int64_t	 pfras_tzero;
+};
+
+struct pfioc_table {
+	struct pfr_table	pfrio_table;
+	void				*pfrio_buffer	__attribute__((aligned(8)));
+	int			 		pfrio_esize	__attribute__((aligned(8)));
+	int			 		pfrio_size;
+	int			 		pfrio_size2;
+	int			 		pfrio_nadd;
+	int			 		pfrio_ndel;
+	int			 		pfrio_nchange;
+	int			 		pfrio_flags;
+	u_int32_t		 	pfrio_ticket;
+};
+
+#define	DIOCRCLRADDRS	_IOWR('D', 66, struct pfioc_table)
+#define	DIOCRADDADDRS	_IOWR('D', 67, struct pfioc_table)
+#define	DIOCRDELADDRS	_IOWR('D', 68, struct pfioc_table)
+#define	DIOCRGETASTATS	_IOWR('D', 71, struct pfioc_table)
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+
+#include "log.h"
+#include "bgpd.h"
 
 /* Namespace collision: these are defined in both bgpd.h and pfvar.h */
 #undef v4
@@ -34,8 +88,6 @@
 #undef addr8
 #undef addr16
 #undef addr32
-
-#include "bgpd.h"
 
 static int devpf = -1;
 
@@ -159,10 +211,8 @@ pftable_clear_all(void)
 	LIST_FOREACH(pft, &tables, entry) {
 		if (pftable_clear(pft->name) != 0)
 			return (-1);
-		if (pft->worklist != NULL) {
-			free(pft->worklist);
-			pft->worklist = NULL;
-		}
+		free(pft->worklist);
+		pft->worklist = NULL;
 		pft->nalloc = pft->naddrs = 0;
 		pft->what = 0;
 	}
@@ -198,7 +248,7 @@ pftable_add_work(const char *table, struct bgpd_addr *addr,
 
 	if (pft->nalloc <= pft->naddrs)
 		pft->nalloc = pft->nalloc == 0 ? 1 : pft->nalloc * 2;
-	tmp = realloc(pft->worklist, sizeof(*tmp) * pft->nalloc);
+	tmp = reallocarray(pft->worklist, pft->nalloc, sizeof(*tmp));
 	if (tmp == NULL) {
 		if (pft->worklist != NULL) {
 			log_warn("pftable_add_work: malloc");
@@ -214,7 +264,7 @@ pftable_add_work(const char *table, struct bgpd_addr *addr,
 
 	bzero(pfa, sizeof(*pfa));
 	memcpy(&pfa->pfra_u, &addr->ba, (len + 7U) / 8);
-	pfa->pfra_af = addr->af;
+	pfa->pfra_af = aid2af(addr->aid);
 	pfa->pfra_net = len;
 
 	pft->naddrs++;
@@ -249,8 +299,7 @@ pftable_commit(void)
 	LIST_FOREACH(pft, &tables, entry) {
 		if (pft->what != 0 && pftable_change(pft) != 0)
 			ret = -1;
-		if (pft->worklist != NULL)
-			free(pft->worklist);
+		free(pft->worklist);
 		pft->worklist = NULL;
 		pft->nalloc = pft->naddrs = 0;
 		pft->what = 0;

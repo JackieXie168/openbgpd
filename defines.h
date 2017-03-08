@@ -177,6 +177,22 @@ typedef unsigned long long int u_int64_t;
 typedef int socklen_t;
 #endif
 
+#ifndef TCP_MD5SIG
+#define TCP_MD5SIG 14
+#endif
+
+#ifndef IPV6_MINHOPCOUNT
+#define IPV6_MINHOPCOUNT 73
+#endif
+
+#ifndef IP_MINTTL
+#define IP_MINTTL 66
+#endif
+
+#ifndef SPI_RESERVED_MAX
+#define SPI_RESERVED_MAX        255
+#endif
+
 /* FSF bison 1.875 wants this to prevent conflicting definitions of YYSTYPE */
 #define YYSTYPE_IS_DECLARED 1
 

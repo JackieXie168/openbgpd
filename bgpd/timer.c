@@ -1,4 +1,4 @@
-/*	$OpenBSD: timer.c,v 1.13 2009/01/21 20:32:53 henning Exp $ */
+/*	$OpenBSD: timer.c,v 1.17 2017/01/24 04:22:42 benno Exp $ */
 
 /*
  * Copyright (c) 2003-2007 Henning Brauer <henning@openbsd.org>
@@ -22,6 +22,11 @@
 
 #include "bgpd.h"
 #include "session.h"
+#include "log.h"
+
+#define MAXIMUM(a, b)	(((a) > (b)) ? (a) : (b))
+
+
 #if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
 #include <mach/mach.h>
 #include <mach/clock.h>
@@ -105,7 +110,7 @@ timer_get(struct peer *p, enum Timer timer)
 
 	TAILQ_FOREACH(pt, &p->timers, entry)
 		if (pt->type == timer)
-				break;
+			break;
 
 	return (pt);
 }
@@ -127,7 +132,7 @@ timer_nextduein(struct peer *p)
 	struct peer_timer *pt;
 
 	if ((pt = TAILQ_FIRST(&p->timers)) != NULL && pt->val > 0)
-		return (MAX(pt->val - getmonotime(), 0));
+		return (MAXIMUM(pt->val - getmonotime(), 0));
 	return (-1);
 }
 

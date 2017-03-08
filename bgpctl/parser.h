@@ -1,4 +1,4 @@
-/*	$OpenBSD: parser.h,v 1.19 2009/06/06 06:05:41 claudio Exp $ */
+/*	$OpenBSD: parser.h,v 1.29 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -29,7 +29,9 @@ enum actions {
 	SHOW_NEIGHBOR_TIMERS,
 	SHOW_NEIGHBOR_TERSE,
 	SHOW_FIB,
+	SHOW_FIB_TABLES,
 	SHOW_RIB,
+	SHOW_MRT,
 	SHOW_RIB_MEM,
 	SHOW_NEXTHOP,
 	SHOW_INTERFACE,
@@ -37,16 +39,22 @@ enum actions {
 	FIB,
 	FIB_COUPLE,
 	FIB_DECOUPLE,
+	LOG_VERBOSE,
+	LOG_BRIEF,
 	NEIGHBOR,
 	NEIGHBOR_UP,
 	NEIGHBOR_DOWN,
 	NEIGHBOR_CLEAR,
 	NEIGHBOR_RREFRESH,
+	NEIGHBOR_DESTROY,
 	NETWORK_ADD,
 	NETWORK_REMOVE,
 	NETWORK_FLUSH,
 	NETWORK_SHOW,
-	IRRFILTER
+	NETWORK_MRT,
+	IRRFILTER,
+	NETWORK_BULK_ADD,
+	NETWORK_BULK_REMOVE
 };
 
 struct parse_result {
@@ -55,14 +63,20 @@ struct parse_result {
 	struct filter_as	 as;
 	struct filter_set_head	 set;
 	struct filter_community  community;
+	struct filter_largecommunity  large_community;
 	char			 peerdesc[PEER_DESCR_LEN];
 	char			 rib[PEER_DESCR_LEN];
+	char			 shutcomm[SHUT_COMM_LEN];
 	char			*irr_outdir;
 	int			 flags;
-	enum actions		action;
+	u_int			 rtableid;
+	enum actions		 action;
 	u_int8_t		 prefixlen;
-	sa_family_t		 af;
+	u_int8_t		 aid;
+	int			 mrtfd;
 };
 
-void			 usage(void);
+__dead void		 usage(void);
 struct parse_result	*parse(int, char *[]);
+int			 parse_prefix(const char *, size_t, struct bgpd_addr *,
+			     u_int8_t *);

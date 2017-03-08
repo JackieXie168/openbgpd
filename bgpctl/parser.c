@@ -1,7 +1,9 @@
-/*	$OpenBSD: parser.c,v 1.54 2009/06/12 16:44:02 claudio Exp $ */
+/*	$OpenBSD: parser.c,v 1.77 2017/02/14 13:13:23 benno Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
+ * Copyright (c) 2016 Job Snijders <job@instituut.net>
+ * Copyright (c) 2016 Peter Hessler <phessler@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,10 +19,10 @@
  */
 
 #include <sys/types.h>
-#include <sys/socket.h>
 
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -30,9 +32,6 @@
 
 #include "parser.h"
 #include "irrfilter.h"
-
-long long
-	strtonum(const char *, long long, long long, const char **);
 
 enum token_type {
 	NOTOKEN,
@@ -46,7 +45,9 @@ enum token_type {
 	PREFIX,
 	PEERDESC,
 	RIBNAME,
+	SHUTDOWN_COMMUNICATION,
 	COMMUNITY,
+	LARGE_COMMUNITY,
 	LOCALPREF,
 	MED,
 	NEXTHOP,
@@ -55,7 +56,10 @@ enum token_type {
 	PREPSELF,
 	WEIGHT,
 	FAMILY,
-	GETOPT
+	GETOPT,
+	RTABLE,
+	FILENAME,
+	BULK
 };
 
 enum getopts {
@@ -75,22 +79,28 @@ static const struct token t_show[];
 static const struct token t_show_summary[];
 static const struct token t_show_fib[];
 static const struct token t_show_rib[];
+static const struct token t_show_mrt[];
+static const struct token t_show_mrt_file[];
 static const struct token t_show_rib_neigh[];
+static const struct token t_show_mrt_neigh[];
 static const struct token t_show_rib_rib[];
 static const struct token t_show_neighbor[];
 static const struct token t_show_neighbor_modifiers[];
 static const struct token t_fib[];
 static const struct token t_neighbor[];
 static const struct token t_neighbor_modifiers[];
-static const struct token t_show_as[];
+static const struct token t_show_rib_as[];
+static const struct token t_show_mrt_as[];
 static const struct token t_show_prefix[];
 static const struct token t_show_ip[];
 static const struct token t_show_community[];
+static const struct token t_show_largecommunity[];
 static const struct token t_network[];
 static const struct token t_network_show[];
 static const struct token t_prefix[];
 static const struct token t_set[];
 static const struct token t_community[];
+static const struct token t_largecommunity[];
 static const struct token t_localpref[];
 static const struct token t_med[];
 static const struct token t_nexthop[];
@@ -100,6 +110,9 @@ static const struct token t_prepself[];
 static const struct token t_weight[];
 static const struct token t_irrfilter[];
 static const struct token t_irrfilter_opts[];
+static const struct token t_log[];
+static const struct token t_fib_table[];
+static const struct token t_show_fib_table[];
 
 static const struct token t_main[] = {
 	{ KEYWORD,	"reload",	RELOAD,		NULL},
@@ -108,6 +121,7 @@ static const struct token t_main[] = {
 	{ KEYWORD,	"neighbor",	NEIGHBOR,	t_neighbor},
 	{ KEYWORD,	"network",	NONE,		t_network},
 	{ KEYWORD,	"irrfilter",	IRRFILTER,	t_irrfilter},
+	{ KEYWORD,	"log",		NONE,		t_log},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
@@ -119,8 +133,10 @@ static const struct token t_show[] = {
 	{ KEYWORD,	"network",	NETWORK_SHOW,	t_network_show},
 	{ KEYWORD,	"nexthop",	SHOW_NEXTHOP,	NULL},
 	{ KEYWORD,	"rib",		SHOW_RIB,	t_show_rib},
+	{ KEYWORD,	"tables",	SHOW_FIB_TABLES, NULL},
 	{ KEYWORD,	"ip",		NONE,		t_show_ip},
 	{ KEYWORD,	"summary",	SHOW_SUMMARY,	t_show_summary},
+	{ KEYWORD,	"mrt",		SHOW_MRT,	t_show_mrt},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
@@ -131,24 +147,28 @@ static const struct token t_show_summary[] = {
 };
 
 static const struct token t_show_fib[] = {
-	{ NOTOKEN,	"",		NONE,			NULL},
-	{ FLAG,		"connected",	F_CONNECTED,		t_show_fib},
-	{ FLAG,		"static",	F_STATIC,		t_show_fib},
-	{ FLAG,		"bgp",		F_BGPD_INSERTED,	t_show_fib},
-	{ FLAG,		"nexthop",	F_NEXTHOP,		t_show_fib},
-	{ FAMILY,	"",		NONE,			t_show_fib},
-	{ ADDRESS,	"",		NONE,			NULL},
-	{ ENDTOKEN,	"",		NONE,			NULL}
+	{ NOTOKEN,	"",		NONE,		 NULL},
+	{ FLAG,		"connected",	F_CONNECTED,	 t_show_fib},
+	{ FLAG,		"static",	F_STATIC,	 t_show_fib},
+	{ FLAG,		"bgp",		F_BGPD_INSERTED, t_show_fib},
+	{ FLAG,		"nexthop",	F_NEXTHOP,	 t_show_fib},
+	{ KEYWORD,	"table",	NONE,		 t_show_fib_table},
+	{ FAMILY,	"",		NONE,		 t_show_fib},
+	{ ADDRESS,	"",		NONE,		 NULL},
+	{ ENDTOKEN,	"",		NONE,		 NULL}
 };
 
 static const struct token t_show_rib[] = {
 	{ NOTOKEN,	"",		NONE,		NULL},
-	{ ASTYPE,	"as",		AS_ALL,		t_show_as},
-	{ ASTYPE,	"source-as",	AS_SOURCE,	t_show_as},
-	{ ASTYPE,	"transit-as",	AS_TRANSIT,	t_show_as},
-	{ ASTYPE,	"peer-as",	AS_PEER,	t_show_as},
+	{ ASTYPE,	"as",		AS_ALL,		t_show_rib_as},
+	{ ASTYPE,	"source-as",	AS_SOURCE,	t_show_rib_as},
+	{ ASTYPE,	"transit-as",	AS_TRANSIT,	t_show_rib_as},
+	{ ASTYPE,	"peer-as",	AS_PEER,	t_show_rib_as},
 	{ ASTYPE,	"empty-as",	AS_EMPTY,	t_show_rib},
 	{ KEYWORD,	"community",	NONE,		t_show_community},
+	{ KEYWORD,	"large-community", NONE,	t_show_largecommunity},
+	{ FLAG,		"best",		F_CTL_ACTIVE,	t_show_rib},
+	{ FLAG,		"selected",	F_CTL_ACTIVE,	t_show_rib},
 	{ FLAG,		"detail",	F_CTL_DETAIL,	t_show_rib},
 	{ FLAG,		"in",		F_CTL_ADJ_IN,	t_show_rib},
 	{ FLAG,		"out",		F_CTL_ADJ_OUT,	t_show_rib},
@@ -161,9 +181,35 @@ static const struct token t_show_rib[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
+
+static const struct token t_show_mrt[] = {
+	{ NOTOKEN,	"",		NONE,		NULL},
+	{ ASTYPE,	"as",		AS_ALL,		t_show_mrt_as},
+	{ ASTYPE,	"source-as",	AS_SOURCE,	t_show_mrt_as},
+	{ ASTYPE,	"transit-as",	AS_TRANSIT,	t_show_mrt_as},
+	{ ASTYPE,	"peer-as",	AS_PEER,	t_show_mrt_as},
+	{ ASTYPE,	"empty-as",	AS_EMPTY,	t_show_mrt},
+	{ FLAG,		"detail",	F_CTL_DETAIL,	t_show_mrt},
+	{ KEYWORD,	"neighbor",	NONE,		t_show_mrt_neigh},
+	{ KEYWORD,	"file",		NONE,		t_show_mrt_file},
+	{ FAMILY,	"",		NONE,		t_show_mrt},
+	{ PREFIX,	"",		NONE,		t_show_prefix},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
+static const struct token t_show_mrt_file[] = {
+	{ FILENAME,	"",		NONE,		t_show_mrt},
+	{ ENDTOKEN,	"",		NONE,	NULL}
+};
+
 static const struct token t_show_rib_neigh[] = {
 	{ PEERADDRESS,	"",		NONE,	t_show_rib},
 	{ PEERDESC,	"",		NONE,	t_show_rib},
+	{ ENDTOKEN,	"",		NONE,	NULL}
+};
+
+static const struct token t_show_mrt_neigh[] = {
+	{ PEERADDRESS,	"",		NONE,	t_show_mrt},
 	{ ENDTOKEN,	"",		NONE,	NULL}
 };
 
@@ -190,6 +236,7 @@ static const struct token t_show_neighbor_modifiers[] = {
 static const struct token t_fib[] = {
 	{ KEYWORD,	"couple",	FIB_COUPLE,	NULL},
 	{ KEYWORD,	"decouple",	FIB_DECOUPLE,	NULL},
+	{ KEYWORD,	"table",	NONE,		t_fib_table},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
@@ -199,16 +246,28 @@ static const struct token t_neighbor[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
+static const struct token t_nei_mod_shutc[] = {
+	{ NOTOKEN,	"",		NONE,		NULL},
+	{ SHUTDOWN_COMMUNICATION, "",	NONE,		NULL},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
 static const struct token t_neighbor_modifiers[] = {
 	{ KEYWORD,	"up",		NEIGHBOR_UP,		NULL},
-	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		NULL},
-	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		NULL},
+	{ KEYWORD,	"down",		NEIGHBOR_DOWN,		t_nei_mod_shutc},
+	{ KEYWORD,	"clear",	NEIGHBOR_CLEAR,		t_nei_mod_shutc},
 	{ KEYWORD,	"refresh",	NEIGHBOR_RREFRESH,	NULL},
+	{ KEYWORD,	"destroy",	NEIGHBOR_DESTROY,	NULL},
 	{ ENDTOKEN,	"",		NONE,			NULL}
 };
 
-static const struct token t_show_as[] = {
+static const struct token t_show_rib_as[] = {
 	{ ASNUM,	"",		NONE,		t_show_rib},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
+static const struct token t_show_mrt_as[] = {
+	{ ASNUM,	"",		NONE,		t_show_mrt},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
@@ -229,11 +288,18 @@ static const struct token t_show_community[] = {
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
+static const struct token t_show_largecommunity[] = {
+	{ LARGE_COMMUNITY,	"",	NONE,		t_show_rib},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
 static const struct token t_network[] = {
 	{ KEYWORD,	"add",		NETWORK_ADD,	t_prefix},
 	{ KEYWORD,	"delete",	NETWORK_REMOVE,	t_prefix},
 	{ KEYWORD,	"flush",	NETWORK_FLUSH,	NULL},
 	{ KEYWORD,	"show",		NETWORK_SHOW,	t_network_show},
+	{ KEYWORD,	"mrt",		NETWORK_MRT,	t_show_mrt},
+	{ KEYWORD,	"bulk",		NETWORK_BULK_ADD,	t_set},
 	{ ENDTOKEN,	"",		NONE,		NULL}
 };
 
@@ -251,6 +317,7 @@ static const struct token t_network_show[] = {
 static const struct token t_set[] = {
 	{ NOTOKEN,	"",			NONE,	NULL},
 	{ KEYWORD,	"community",		NONE,	t_community},
+	{ KEYWORD,	"large-community",	NONE,	t_largecommunity},
 	{ KEYWORD,	"localpref",		NONE,	t_localpref},
 	{ KEYWORD,	"med",			NONE,	t_med},
 	{ KEYWORD,	"metric",		NONE,	t_med},
@@ -259,11 +326,18 @@ static const struct token t_set[] = {
 	{ KEYWORD,	"prepend-neighbor",	NONE,	t_prepnbr},
 	{ KEYWORD,	"prepend-self",		NONE,	t_prepself},
 	{ KEYWORD,	"weight",		NONE,	t_weight},
+	{ KEYWORD,	"add",			NETWORK_BULK_ADD,	NULL},
+	{ KEYWORD,	"delete",		NETWORK_BULK_REMOVE,	NULL},
 	{ ENDTOKEN,	"",			NONE,	NULL}
 };
 
 static const struct token t_community[] = {
 	{ COMMUNITY,	"",			NONE,	t_set},
+	{ ENDTOKEN,	"",			NONE,	NULL}
+};
+
+static const struct token t_largecommunity[] = {
+	{ LARGE_COMMUNITY,	"",		NONE,	t_set},
 	{ ENDTOKEN,	"",			NONE,	NULL}
 };
 
@@ -314,19 +388,35 @@ static const struct token t_irrfilter_opts[] = {
 	{ ENDTOKEN,	"",		NONE,			NULL}
 };
 
+static const struct token t_log[] = {
+	{ KEYWORD,	"verbose",	LOG_VERBOSE,	NULL},
+	{ KEYWORD,	"brief",	LOG_BRIEF,	NULL},
+	{ ENDTOKEN,	"",		NONE,		NULL}
+};
+
+static const struct token t_fib_table[] = {
+	{ RTABLE,	"",			NONE,	t_fib},
+	{ ENDTOKEN,	"",			NONE,	NULL}
+};
+
+static const struct token t_show_fib_table[] = {
+	{ RTABLE,	"",			NONE,	t_show_fib},
+	{ ENDTOKEN,	"",			NONE,	NULL}
+};
+
 static struct parse_result	res;
 
 const struct token	*match_token(int *argc, char **argv[],
 			    const struct token []);
 void			 show_valid_args(const struct token []);
 int			 parse_addr(const char *, struct bgpd_addr *);
-int			 parse_prefix(const char *, struct bgpd_addr *,
-			     u_int8_t *);
-int			 parse_asnum(const char *, u_int32_t *);
+int			 parse_asnum(const char *, size_t, u_int32_t *);
 int			 parse_number(const char *, struct parse_result *,
 			     enum token_type);
 int			 getcommunity(const char *);
 int			 parse_community(const char *, struct parse_result *);
+u_int			 getlargecommunity(const char *);
+int			 parse_largecommunity(const char *, struct parse_result *);
 int			 parse_nexthop(const char *, struct parse_result *);
 int			 bgpctl_getopt(int *, char **[], int);
 
@@ -339,9 +429,12 @@ parse(int argc, char *argv[])
 	bzero(&res, sizeof(res));
 	res.community.as = COMMUNITY_UNSET;
 	res.community.type = COMMUNITY_UNSET;
+	res.large_community.as = COMMUNITY_UNSET;
+	res.large_community.ld1 = COMMUNITY_UNSET;
+	res.large_community.ld2 = COMMUNITY_UNSET;
 	TAILQ_INIT(&res.set);
 	if ((res.irr_outdir = getcwd(NULL, 0)) == NULL) {
-		fprintf(stderr, "getcwd failed: %s", strerror(errno));
+		fprintf(stderr, "getcwd failed: %s\n", strerror(errno));
 		return (NULL);
 	}
 
@@ -376,20 +469,22 @@ match_token(int *argc, char **argv[], const struct token table[])
 	const struct token	*t = NULL;
 	struct filter_set	*fs;
 	const char		*word = *argv[0];
+	size_t			wordlen = 0;
 
 	match = 0;
-
+	if (word != NULL)
+		wordlen = strlen(word);
 	for (i = 0; table[i].type != ENDTOKEN; i++) {
 		switch (table[i].type) {
 		case NOTOKEN:
-			if (word == NULL || strlen(word) == 0) {
+			if (word == NULL || wordlen == 0) {
 				match++;
 				t = &table[i];
 			}
 			break;
 		case KEYWORD:
 			if (word != NULL && strncmp(word, table[i].keyword,
-			    strlen(word)) == 0) {
+			    wordlen) == 0) {
 				match++;
 				t = &table[i];
 				if (t->value)
@@ -398,7 +493,7 @@ match_token(int *argc, char **argv[], const struct token table[])
 			break;
 		case FLAG:
 			if (word != NULL && strncmp(word, table[i].keyword,
-			    strlen(word)) == 0) {
+			    wordlen) == 0) {
 				match++;
 				t = &table[i];
 				res.flags |= t->value;
@@ -407,15 +502,22 @@ match_token(int *argc, char **argv[], const struct token table[])
 		case FAMILY:
 			if (word == NULL)
 				break;
-			if (!strcmp(word, "inet") || !strcmp(word, "IPv4")) {
+			if (!strcmp(word, "inet") ||
+			    !strcasecmp(word, "IPv4")) {
 				match++;
 				t = &table[i];
-				res.af = AF_INET;
+				res.aid = AID_INET;
 			}
-			if (!strcmp(word, "inet6") || !strcmp(word, "IPv6")) {
+			if (!strcmp(word, "inet6") ||
+			    !strcasecmp(word, "IPv6")) {
 				match++;
 				t = &table[i];
-				res.af = AF_INET6;
+				res.aid = AID_INET6;
+			}
+			if (!strcasecmp(word, "VPNv4")) {
+				match++;
+				t = &table[i];
+				res.aid = AID_VPN_IPv4;
 			}
 			break;
 		case ADDRESS:
@@ -435,7 +537,7 @@ match_token(int *argc, char **argv[], const struct token table[])
 			}
 			break;
 		case PREFIX:
-			if (parse_prefix(word, &res.addr, &res.prefixlen)) {
+			if (parse_prefix(word, wordlen, &res.addr, &res.prefixlen)) {
 				match++;
 				t = &table[i];
 				if (t->value)
@@ -444,20 +546,20 @@ match_token(int *argc, char **argv[], const struct token table[])
 			break;
 		case ASTYPE:
 			if (word != NULL && strncmp(word, table[i].keyword,
-			    strlen(word)) == 0) {
+			    wordlen) == 0) {
 				match++;
 				t = &table[i];
 				res.as.type = t->value;
 			}
 			break;
 		case ASNUM:
-			if (parse_asnum(word, &res.as.as)) {
+			if (parse_asnum(word, wordlen, &res.as.as)) {
 				match++;
 				t = &table[i];
 			}
 			break;
 		case PEERDESC:
-			if (!match && word != NULL && strlen(word) > 0) {
+			if (!match && word != NULL && wordlen > 0) {
 				if (strlcpy(res.peerdesc, word,
 				    sizeof(res.peerdesc)) >=
 				    sizeof(res.peerdesc))
@@ -468,7 +570,7 @@ match_token(int *argc, char **argv[], const struct token table[])
 			}
 			break;
 		case RIBNAME:
-			if (!match && word != NULL && strlen(word) > 0) {
+			if (!match && word != NULL && wordlen > 0) {
 				if (strlcpy(res.rib, word, sizeof(res.rib)) >=
 				    sizeof(res.rib))
 					errx(1, "rib name too long");
@@ -476,9 +578,26 @@ match_token(int *argc, char **argv[], const struct token table[])
 				t = &table[i];
 			}
 			break;
+		case SHUTDOWN_COMMUNICATION:
+			if (!match && word != NULL && wordlen > 0) {
+				if (strlcpy(res.shutcomm, word,
+				    sizeof(res.shutcomm)) >=
+				    sizeof(res.shutcomm))
+					errx(1, "shutdown reason too long");
+				match++;
+				t = &table[i];
+			}
+			break;
 		case COMMUNITY:
-			if (word != NULL && strlen(word) > 0 &&
+			if (word != NULL && wordlen > 0 &&
 			    parse_community(word, &res)) {
+				match++;
+				t = &table[i];
+			}
+			break;
+		case LARGE_COMMUNITY:
+			if (word != NULL && wordlen > 0 &&
+			    parse_largecommunity(word, &res)) {
 				match++;
 				t = &table[i];
 			}
@@ -488,21 +607,22 @@ match_token(int *argc, char **argv[], const struct token table[])
 		case PREPNBR:
 		case PREPSELF:
 		case WEIGHT:
-			if (word != NULL && strlen(word) > 0 &&
+		case RTABLE:
+			if (word != NULL && wordlen > 0 &&
 			    parse_number(word, &res, table[i].type)) {
 				match++;
 				t = &table[i];
 			}
 			break;
 		case NEXTHOP:
-			if (word != NULL && strlen(word) > 0 &&
+			if (word != NULL && wordlen > 0 &&
 			    parse_nexthop(word, &res)) {
 				match++;
 				t = &table[i];
 			}
 			break;
 		case PFTABLE:
-			if (word != NULL && strlen(word) > 0) {
+			if (word != NULL && wordlen > 0) {
 				if ((fs = calloc(1,
 				    sizeof(struct filter_set))) == NULL)
 					err(1, NULL);
@@ -520,6 +640,27 @@ match_token(int *argc, char **argv[], const struct token table[])
 				match++;
 				t = &table[i];
 			}
+			break;
+		case FILENAME:
+			if (word != NULL && wordlen > 0) {
+				if ((res.mrtfd = open(word, O_RDONLY)) == -1) {
+					/*
+					 * ignore error if path has no / and
+					 * does not exist. In hope to print
+					 * usage.
+					 */
+					if (errno == ENOENT &&
+					    !strchr(word, '/'))
+						break;
+					err(1, "mrt open(%s)", word);
+				}
+				match++;
+				t = &table[i];
+			}
+			break;
+		case BULK:
+			match++;
+			t = &table[i];
 			break;
 		case ENDTOKEN:
 			break;
@@ -570,8 +711,14 @@ show_valid_args(const struct token table[])
 		case RIBNAME:
 			fprintf(stderr, "  <rib name>\n");
 			break;
+		case SHUTDOWN_COMMUNICATION:
+			fprintf(stderr, "  <shutdown reason>\n");
+			break;
 		case COMMUNITY:
 			fprintf(stderr, "  <community>\n");
+			break;
+		case LARGE_COMMUNITY:
+			fprintf(stderr, "  <large-community>\n");
 			break;
 		case LOCALPREF:
 		case MED:
@@ -580,6 +727,9 @@ show_valid_args(const struct token table[])
 		case WEIGHT:
 			fprintf(stderr, "  <number>\n");
 			break;
+		case RTABLE:
+			fprintf(stderr, "  <rtableid>\n");
+			break;
 		case NEXTHOP:
 			fprintf(stderr, "  <address>\n");
 			break;
@@ -587,11 +737,15 @@ show_valid_args(const struct token table[])
 			fprintf(stderr, "  <pftable>\n");
 			break;
 		case FAMILY:
-			fprintf(stderr, "  [ inet | inet6 | IPv4 | IPv6 ]\n");
+			fprintf(stderr, "  [ inet | inet6 | IPv4 | IPv6 | VPNv4 ]\n");
 			break;
 		case GETOPT:
 			fprintf(stderr, "  <options>\n");
 			break;
+		case FILENAME:
+			fprintf(stderr, "  <filename>\n");
+			break;
+		case BULK:
 		case ENDTOKEN:
 			break;
 		}
@@ -611,7 +765,7 @@ parse_addr(const char *word, struct bgpd_addr *addr)
 	bzero(&ina, sizeof(ina));
 
 	if (inet_net_pton(AF_INET, word, &ina, sizeof(ina)) != -1) {
-		addr->af = AF_INET;
+		addr->aid = AID_INET;
 		addr->v4 = ina;
 		return (1);
 	}
@@ -621,13 +775,7 @@ parse_addr(const char *word, struct bgpd_addr *addr)
 	hints.ai_socktype = SOCK_DGRAM; /*dummy*/
 	hints.ai_flags = AI_NUMERICHOST;
 	if (getaddrinfo(word, "0", &hints, &r) == 0) {
-		addr->af = AF_INET6;
-		memcpy(&addr->v6,
-		    &((struct sockaddr_in6 *)r->ai_addr)->sin6_addr,
-		    sizeof(addr->v6));
-		addr->scope_id =
-		    ((struct sockaddr_in6 *)r->ai_addr)->sin6_scope_id;
-
+		sa2addr(r->ai_addr, addr);
 		freeaddrinfo(r);
 		return (1);
 	}
@@ -636,10 +784,10 @@ parse_addr(const char *word, struct bgpd_addr *addr)
 }
 
 int
-parse_prefix(const char *word, struct bgpd_addr *addr, u_int8_t *prefixlen)
+parse_prefix(const char *word, size_t wordlen, struct bgpd_addr *addr, u_int8_t *prefixlen)
 {
 	char		*p, *ps;
-	const char	*errstr = NULL;
+	const char	*errstr;
 	int		 mask = -1;
 
 	if (word == NULL)
@@ -648,13 +796,14 @@ parse_prefix(const char *word, struct bgpd_addr *addr, u_int8_t *prefixlen)
 	bzero(addr, sizeof(struct bgpd_addr));
 
 	if ((p = strrchr(word, '/')) != NULL) {
+		size_t plen = strlen(p);
 		mask = strtonum(p + 1, 0, 128, &errstr);
 		if (errstr)
-			errx(1, "invalid netmask: %s", errstr);
+			errx(1, "netmask %s", errstr);
 
-		if ((ps = malloc(strlen(word) - strlen(p) + 1)) == NULL)
+		if ((ps = malloc(wordlen - plen + 1)) == NULL)
 			err(1, "parse_prefix: malloc");
-		strlcpy(ps, word, strlen(word) - strlen(p) + 1);
+		strlcpy(ps, word, wordlen - plen + 1);
 
 		if (parse_addr(ps, addr) == 0) {
 			free(ps);
@@ -666,15 +815,15 @@ parse_prefix(const char *word, struct bgpd_addr *addr, u_int8_t *prefixlen)
 		if (parse_addr(word, addr) == 0)
 			return (0);
 
-	switch (addr->af) {
-	case AF_INET:
+	switch (addr->aid) {
+	case AID_INET:
 		if (mask == -1)
 			mask = 32;
 		if (mask > 32)
 			errx(1, "invalid netmask: too large");
 		addr->v4.s_addr = addr->v4.s_addr & htonl(prefixlen2mask(mask));
 		break;
-	case AF_INET6:
+	case AID_INET6:
 		if (mask == -1)
 			mask = 128;
 		inet6applymask(&addr->v6, &addr->v6, mask);
@@ -688,7 +837,7 @@ parse_prefix(const char *word, struct bgpd_addr *addr, u_int8_t *prefixlen)
 }
 
 int
-parse_asnum(const char *word, u_int32_t *asnum)
+parse_asnum(const char *word, size_t wordlen, u_int32_t *asnum)
 {
 	const char	*errstr;
 	char		*dot;
@@ -697,7 +846,7 @@ parse_asnum(const char *word, u_int32_t *asnum)
 	if (word == NULL)
 		return (0);
 
-	if (strlen(word) < 1 || word[0] < '0' || word[0] > '9')
+	if (wordlen < 1 || word[0] < '0' || word[0] > '9')
 		return (0);
 
 	if ((dot = strchr(word,'.')) != NULL) {
@@ -709,7 +858,7 @@ parse_asnum(const char *word, u_int32_t *asnum)
 		if (errstr)
 			errx(1, "AS number is %s: %s", errstr, word);
 	} else {
-		uval = strtonum(word, 0, ASNUM_MAX - 1, &errstr);
+		uval = strtonum(word, 0, UINT_MAX, &errstr);
 		if (errstr)
 			errx(1, "AS number is %s: %s", errstr, word);
 	}
@@ -733,6 +882,11 @@ parse_number(const char *word, struct parse_result *r, enum token_type type)
 		errx(1, "number is %s: %s", errstr, word);
 
 	/* number was parseable */
+	if (type == RTABLE) {
+		r->rtableid = uval;
+		return (1);
+	}
+
 	if ((fs = calloc(1, sizeof(struct filter_set))) == NULL)
 		err(1, NULL);
 	switch (type) {
@@ -812,6 +966,10 @@ parse_community(const char *word, struct parse_result *r)
 		as = COMMUNITY_WELLKNOWN;
 		type = COMMUNITY_NO_PEER;
 		goto done;
+	} else if (strcasecmp(word, "BLACKHOLE") == 0) {
+		as = COMMUNITY_WELLKNOWN;
+		type = COMMUNITY_BLACKHOLE;
+		goto done;
 	}
 
 	if ((p = strchr(word, ':')) == NULL) {
@@ -833,6 +991,7 @@ done:
 		case COMMUNITY_NO_EXPORT:
 		case COMMUNITY_NO_ADVERTISE:
 		case COMMUNITY_NO_EXPSUBCONFED:
+		case COMMUNITY_BLACKHOLE:
 			/* valid */
 			break;
 		default:
@@ -849,6 +1008,62 @@ done:
 
 	r->community.as = as;
 	r->community.type = type;
+
+	TAILQ_INSERT_TAIL(&r->set, fs, entry);
+	return (1);
+}
+
+u_int
+getlargecommunity(const char *s)
+{
+	const char	*errstr;
+	u_int32_t	 uval;
+
+	if (strcmp(s, "*") == 0)
+		return (COMMUNITY_ANY);
+
+	uval = strtonum(s, 0, UINT_MAX, &errstr);
+	if (errstr)
+		errx(1, "Large Community is %s: %s", errstr, s);
+
+	return (uval);
+}
+
+int
+parse_largecommunity(const char *word, struct parse_result *r)
+{
+	struct filter_set *fs;
+	char		*p, *po = strdup(word);
+	char		*array[3] = { NULL, NULL, NULL };
+	char		*val;
+	int64_t		 as, ld1, ld2;
+	int		 i = 0;
+
+	p = po;
+	while ((p != NULL) && (i < 3)) {
+		val = strsep(&p, ":");
+		array[i++] = val;
+	}
+
+	if ((p != NULL) || !(array[0] && array[1] && array[2]))
+		errx(1, "Invalid Large-Community syntax");
+
+	as   = getlargecommunity(array[0]);
+	ld1  = getlargecommunity(array[1]);
+	ld2  = getlargecommunity(array[2]);
+
+	free(po);
+
+	if ((fs = calloc(1, sizeof(struct filter_set))) == NULL)
+		err(1, NULL);
+	fs->type = ACTION_SET_LARGE_COMMUNITY;
+	fs->action.large_community.as = as;
+	fs->action.large_community.ld1 = ld1;
+	fs->action.large_community.ld2 = ld2;
+
+	r->large_community.as = as;
+	r->large_community.ld1 = ld1;
+	r->large_community.ld2 = ld2;
 
 	TAILQ_INSERT_TAIL(&r->set, fs, entry);
 	return (1);
@@ -884,9 +1099,15 @@ bgpctl_getopt(int *argc, char **argv[], int type)
 {
 	int	  ch;
 
-	optind = 1;
-	while ((ch = getopt((*argc) + 1, (*argv) - 1, "o:")) != -1) {
+	optind = optreset = 1;
+	while ((ch = getopt((*argc) + 1, (*argv) - 1, "46o:")) != -1) {
 		switch (ch) {
+		case '4':
+			res.flags = (res.flags | F_IPV4) & ~F_IPV6;
+			break;
+		case '6':
+			res.flags = (res.flags | F_IPV6) & ~F_IPV4;
+			break;
 		case 'o':
 			res.irr_outdir = optarg;
 			break;
