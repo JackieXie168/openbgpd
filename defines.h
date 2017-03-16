@@ -30,7 +30,7 @@
 # if defined(HAVE_STRUCT_SOCKADDR_SS_LEN)
 #  define SS_LEN(x)  ((x)->ss_len)
 #  define SET_SS_LEN(x, y) do { SS_LEN(x) = (y); } while(0)
-#  define STORAGE_LEN(X) ((X).ss_len)
+#  define STORAGE_LEN(X) (X.ss_len)
 #  define SET_STORAGE_LEN(X, Y) do { STORAGE_LEN(X) = (Y); } while(0)
 # else
 #  define SS_LEN(x)  SA_LEN((struct sockaddr *)&(x))

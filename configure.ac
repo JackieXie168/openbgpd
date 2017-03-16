@@ -396,6 +396,22 @@ AC_CHECK_TYPES(socklen_t,,,[
 ])
 
 
+AC_CACHE_CHECK([for ss_len field in struct sockaddr_storage],
+		ac_cv_have_ss_len_in_struct_ss, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ struct sockaddr_storage s; s.ss_len = 1; ],
+		[ ac_cv_have_ss_len_in_struct_ss="yes" ],
+		[ ac_cv_have_ss_len_in_struct_ss="no" ],
+	)
+])
+if test "x$ac_cv_have_ss_len_in_struct_ss" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_SOCKADDR_SS_LEN, 1, [Does struct sockaddr_storage have ss_len?])
+fi
+
 ##################### MODULES ##################################################
 #
 # Modules configuration
