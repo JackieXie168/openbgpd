@@ -76,7 +76,7 @@ AC_CHECK_FUNCS(socketpair, ,
 )
 
 AC_CHECK_FUNCS(adjtimex arc4random asprintf bzero clock_getres daemon \
-        getifaddrs inet_pton setproctitle snprintf strlcpy vsnprintf vsyslog)
+        getifaddrs getline inet_pton setproctitle snprintf strlcpy vsnprintf vsyslog)
 
 dnl Check for uidswap functions
 AC_CHECK_FUNCS(setuid setgid seteuid setegid setreuid setregid \

@@ -31,14 +31,45 @@
 #include <net/pfkeyv2.h>
 #endif
 
+#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
 #include "sys-queue.h"
+#else
+#include <sys/queue.h>
+#if __linux__
+/*
+ * Supply macros missing from <sys/queue.h>
+ */
+
+#ifndef	STAILQ_FOREACH_SAFE
+#define STAILQ_FOREACH_SAFE(var, head, field, tvar)            \
+       for ((var) = STAILQ_FIRST((head));                      \
+            (var) && ((tvar) = STAILQ_NEXT((var), field), 1);  \
+            (var) = (tvar))
+#endif
+
+#ifndef	STAILQ_LAST
+#define STAILQ_LAST(head, type, field)                                  \
+        (STAILQ_EMPTY((head)) ?                                         \
+                NULL :                                                  \
+                ((struct type *)(void *)                                \
+                ((char *)((head)->stqh_last) - offsetof(struct type, field))))
+#endif
+
+#ifndef	TAILQ_FOREACH_SAFE
+#define TAILQ_FOREACH_SAFE(var, head, field, tvar)                      \
+	for ((var) = TAILQ_FIRST((head));                               \
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);            \
+	    (var) = (tvar))
+#endif
+#endif
+#endif
 #include "sys-tree.h"
 #include "defines.h"
 
 #include <poll.h>
 #include <stdarg.h>
 
-#if defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#if defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__
 #include "openbsd-compat.h"
 #endif
 #include <imsg.h>

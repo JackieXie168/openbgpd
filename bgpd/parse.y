@@ -30,6 +30,8 @@
 #include <arpa/inet.h>
 #if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
 #include <net/pfkeyv2.h>
+#elif __linux__
+#include <linux/pfkeyv2.h>
 #else
 #include <netinet/ip_ipsp.h>
 #include <netmpls/mpls.h>

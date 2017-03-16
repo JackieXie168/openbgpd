@@ -360,7 +360,9 @@ mrt_parse_v2_rib(struct mrt_hdr *hdr, void *msg)
 		if (len < MRT_PREFIX_LEN(plen))
 			goto fail;
 		r->prefix.sin.sin_family = AF_INET;
+#if !__linux__
 		r->prefix.sin.sin_len = sizeof(struct sockaddr_in);
+#endif
 		memcpy(&r->prefix.sin.sin_addr, b, MRT_PREFIX_LEN(plen));
 		b += MRT_PREFIX_LEN(plen);
 		len -= MRT_PREFIX_LEN(plen);
@@ -373,7 +375,9 @@ mrt_parse_v2_rib(struct mrt_hdr *hdr, void *msg)
 		if (len < MRT_PREFIX_LEN(plen))
 			goto fail;
 		r->prefix.sin6.sin6_family = AF_INET6;
+#if !__linux__
 		r->prefix.sin6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy(&r->prefix.sin6.sin6_addr, b, MRT_PREFIX_LEN(plen));
 		b += MRT_PREFIX_LEN(plen);
 		len -= MRT_PREFIX_LEN(plen);
@@ -693,7 +697,9 @@ mrt_parse_dump_mp(struct mrt_hdr *hdr, void *msg, struct mrt_peer **pp,
 		if (len < MRT_PREFIX_LEN(r->prefixlen))
 			goto fail;
 		r->prefix.sin.sin_family = AF_INET;
+#if !__linux__
 		r->prefix.sin.sin_len = sizeof(struct sockaddr_in);
+#endif
 		memcpy(&r->prefix.sin.sin_addr, b,
 		    MRT_PREFIX_LEN(r->prefixlen));
 		b += MRT_PREFIX_LEN(r->prefixlen);
@@ -703,7 +709,9 @@ mrt_parse_dump_mp(struct mrt_hdr *hdr, void *msg, struct mrt_peer **pp,
 		if (len < MRT_PREFIX_LEN(r->prefixlen))
 			goto fail;
 		r->prefix.sin6.sin6_family = AF_INET6;
+#if !__linux__
 		r->prefix.sin6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy(&r->prefix.sin6.sin6_addr, b,
 		    MRT_PREFIX_LEN(r->prefixlen));
 		b += MRT_PREFIX_LEN(r->prefixlen);
@@ -789,7 +797,9 @@ mrt_extract_attr(struct mrt_rib_entry *re, u_char *a, int alen, sa_family_t af,
 			if (af != AF_INET)
 				break;
 			memcpy(&tmp, a, sizeof(tmp));
+#if !__linux__
 			re->nexthop.sin.sin_len = sizeof(struct sockaddr_in);
+#endif
 			re->nexthop.sin.sin_family = AF_INET;
 			re->nexthop.sin.sin_addr.s_addr = tmp;
 			break;
@@ -826,8 +836,10 @@ mrt_extract_attr(struct mrt_rib_entry *re, u_char *a, int alen, sa_family_t af,
 			case AF_INET6:
 				if (attr_len < sizeof(struct in6_addr) + 1)
 					return (-1);
+#if !__linux__
 				re->nexthop.sin6.sin6_len =
 				    sizeof(struct sockaddr_in6);
+#endif
 				re->nexthop.sin6.sin6_family = AF_INET6;
 				memcpy(&re->nexthop.sin6.sin6_addr, a + 1,
 				    sizeof(struct in6_addr));
@@ -964,14 +976,18 @@ mrt_extract_addr(void *msg, u_int len, union mrt_addr *addr, sa_family_t af)
 		if (len < sizeof(struct in_addr))
 			return (-1);
 		addr->sin.sin_family = AF_INET;
+#if !__linux__
 		addr->sin.sin_len = sizeof(struct sockaddr_in);
+#endif
 		memcpy(&addr->sin.sin_addr, b, sizeof(struct in_addr));
 		return sizeof(struct in_addr);
 	case AF_INET6:
 		if (len < sizeof(struct in6_addr))
 			return (-1);
 		addr->sin6.sin6_family = AF_INET6;
+#if !__linux__
 		addr->sin6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy(&addr->sin6.sin6_addr, b, sizeof(struct in6_addr));
 		return sizeof(struct in6_addr);
 	case AF_VPNv4:

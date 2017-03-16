@@ -70,7 +70,7 @@ imsg_read(struct imsgbuf *ibuf)
 		return (-1);
 
 again:
-#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__
 	if (imsg_fd_overhead +
 #else
 	if (getdtablecount() + imsg_fd_overhead +

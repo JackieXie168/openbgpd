@@ -405,7 +405,7 @@ prepare_listeners(struct bgpd_config *conf)
 		    &opt, sizeof(opt)) == -1)
 			fatal("setsockopt SO_REUSEADDR");
 
-		if (bind(la->fd, (struct sockaddr *)&la->sa, la->sa.ss_len) ==
+		if (bind(la->fd, (struct sockaddr *)&la->sa, SS_LEN1(la->sa)) ==
 		    -1) {
 			switch (la->sa.ss_family) {
 			case AF_INET:

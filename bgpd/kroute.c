@@ -24,9 +24,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#if __linux__
+#include <linux-if_dl.h>
+#else
 #include <net/if_dl.h>
+#endif
 #include <net/route.h>
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no mpls support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX has no mpls support. */
 #include <netmpls/mpls.h>
 #endif
 #include <err.h>
@@ -439,7 +443,7 @@ ktable_postload(u_int8_t fib_prio)
 int
 ktable_exists(u_int rtableid, u_int *rdomid)
 {
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX does not have NET_RT_TABLE. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux does not have NET_RT_TABLE. */
 	size_t			 len;
 	struct rt_tableinfo	 info;
 	int			 mib[6];
@@ -2393,7 +2397,11 @@ mask2prefixlen6(struct sockaddr_in6 *sa_in6)
 	 * the possibly truncated sin6_addr struct.
 	 */
 	ap = (u_int8_t *)&sa_in6->sin6_addr;
+#if __linux__
+ep = (u_int8_t *)sa_in6 + sizeof(struct sockaddr_in6);
+#else
 	ep = (u_int8_t *)sa_in6 + sa_in6->sin6_len;
+#endif
 	for (; ap < ep; ap++) {
 		/* this "beauty" is adopted from sbin/route/show.c ... */
 		switch (*ap) {
@@ -2459,14 +2467,13 @@ get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 		if (addrs & (1 << i)) {
 			rti_info[i] = sa;
 			sa = (struct sockaddr *)((char *)(sa) +
-			    ROUNDUP(sa->sa_len));
+			    ROUNDUP(SA_LEN(sa)));
 		} else
 			rti_info[i] = NULL;
 	}
 }
 
-void
-if_change(u_short ifindex, int flags, struct if_data *ifd)
+void if_change(u_short ifindex, int flags, struct if_data *ifd)
 {
 	struct ktable		*kt;
 	struct kif_node		*kif;
@@ -2481,7 +2488,7 @@ if_change(u_short ifindex, int flags, struct if_data *ifd)
 	}
 
 	kif->k.flags = flags;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no ifi_link_state member support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no ifi_link_state member support. */
 	kif->k.link_state = ifd->ifi_link_state;
 #endif
 	kif->k.if_type = ifd->ifi_type;
@@ -2565,7 +2572,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 		struct sockaddr_dl	dl;
 		char			pad[sizeof(long)];
 	}			ifp;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 	struct sockaddr_mpls	mpls;
 	struct sockaddr_rtlabel	label;
 #endif
@@ -2578,10 +2585,10 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 	bzero(&hdr, sizeof(hdr));
 	hdr.rtm_version = RTM_VERSION;
 	hdr.rtm_type = action;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 	hdr.rtm_tableid = kt->rtableid;
 #endif
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no rtm_priority. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no rtm_priority. */
 	hdr.rtm_priority = fib_prio;
 #else
 	hdr.rtm_flags = RTF_PROTO1;
@@ -2590,7 +2597,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 		hdr.rtm_flags |= RTF_BLACKHOLE;
 	if (kroute->flags & F_REJECT)
 		hdr.rtm_flags |= RTF_REJECT;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_fmask support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_fmask support. */
 	if (action == RTM_CHANGE)	/* reset these flags on change */
 		hdr.rtm_fmask = RTF_REJECT|RTF_BLACKHOLE;
 #endif
@@ -2601,7 +2608,9 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 	iov[iovcnt++].iov_len = sizeof(hdr);
 
 	bzero(&prefix, sizeof(prefix));
+#if !__linux__
 	prefix.sin_len = sizeof(prefix);
+#endif
 	prefix.sin_family = AF_INET;
 	prefix.sin_addr.s_addr = kroute->prefix.s_addr;
 	/* adjust header */
@@ -2613,7 +2622,9 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 
 	if (kroute->nexthop.s_addr != 0) {
 		bzero(&nexthop, sizeof(nexthop));
+#if !__linux__
 		nexthop.sin_len = sizeof(nexthop);
+#endif
 		nexthop.sin_family = AF_INET;
 		nexthop.sin_addr.s_addr = kroute->nexthop.s_addr;
 		/* adjust header */
@@ -2626,7 +2637,9 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 	}
 
 	bzero(&mask, sizeof(mask));
+#if !__linux__
 	mask.sin_len = sizeof(mask);
+#endif
 	mask.sin_family = AF_INET;
 	mask.sin_addr.s_addr = htonl(prefixlen2mask(kroute->prefixlen));
 	/* adjust header */
@@ -2649,7 +2662,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 		iov[iovcnt++].iov_len = ROUNDUP(sizeof(struct sockaddr_dl));
 	}
 
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no mpls support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no mpls support. */
 	if (kroute->flags & F_MPLS) {
 		bzero(&mpls, sizeof(mpls));
 		mpls.smpls_len = sizeof(mpls);
@@ -2666,7 +2679,7 @@ send_rtmsg(int fd, int action, struct ktable *kt, struct kroute *kroute,
 	}
 #endif
 
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling. */
 	if (kroute->labelid) {
 		bzero(&label, sizeof(label));
 		label.sr_len = sizeof(label);
@@ -2712,7 +2725,7 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 		struct sockaddr_in6	addr;
 		char			pad[sizeof(long)];
 	} prefix, nexthop, mask;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 	struct sockaddr_rtlabel	label;
 #endif
 	int			iovcnt = 0;
@@ -2724,10 +2737,10 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 	bzero(&hdr, sizeof(hdr));
 	hdr.rtm_version = RTM_VERSION;
 	hdr.rtm_type = action;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 	hdr.rtm_tableid = kt->rtableid;
 #endif
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no rtm_priority. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no rtm_priority. */
 	hdr.rtm_priority = fib_prio;
 #else
 	hdr.rtm_flags = RTF_PROTO1;
@@ -2736,7 +2749,7 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 		hdr.rtm_flags |= RTF_BLACKHOLE;
 	if (kroute->flags & F_REJECT)
 		hdr.rtm_flags |= RTF_REJECT;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_fmask support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_fmask support. */
 	if (action == RTM_CHANGE)	/* reset these flags on change */
 		hdr.rtm_fmask = RTF_REJECT|RTF_BLACKHOLE;
 #endif
@@ -2747,7 +2760,9 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 	iov[iovcnt++].iov_len = sizeof(hdr);
 
 	bzero(&prefix, sizeof(prefix));
+#if !__linux__
 	prefix.addr.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 	prefix.addr.sin6_family = AF_INET6;
 	memcpy(&prefix.addr.sin6_addr, &kroute->prefix,
 	    sizeof(struct in6_addr));
@@ -2761,7 +2776,9 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 
 	if (memcmp(&kroute->nexthop, &in6addr_any, sizeof(struct in6_addr))) {
 		bzero(&nexthop, sizeof(nexthop));
+#if !__linux__
 		nexthop.addr.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		nexthop.addr.sin6_family = AF_INET6;
 		memcpy(&nexthop.addr.sin6_addr, &kroute->nexthop,
 		    sizeof(struct in6_addr));
@@ -2775,7 +2792,9 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 	}
 
 	bzero(&mask, sizeof(mask));
+#if !__linux__
 	mask.addr.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 	mask.addr.sin6_family = AF_INET6;
 	memcpy(&mask.addr.sin6_addr, prefixlen2mask6(kroute->prefixlen),
 	    sizeof(struct in6_addr));
@@ -2786,7 +2805,7 @@ send_rt6msg(int fd, int action, struct ktable *kt, struct kroute6 *kroute,
 	iov[iovcnt].iov_base = &mask;
 	iov[iovcnt++].iov_len = ROUNDUP(sizeof(struct sockaddr_in6));
 
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 	if (kroute->labelid) {
 		bzero(&label, sizeof(label));
 		label.sr_len = sizeof(label);
@@ -2868,7 +2887,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 		rtm = (struct rt_msghdr *)next;
 		if (rtm->rtm_version != RTM_VERSION)
 			continue;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_hdrlen support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_hdrlen support. */
 		sa = (struct sockaddr *)(next + rtm->rtm_hdrlen);
 #else
 		sa = (struct sockaddr *)(next + sizeof(struct rt_msghdr));
@@ -2892,7 +2911,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			}
 
 			kr->r.flags = F_KERNEL;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_priority support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_priority support. */
 			kr->r.priority = rtm->rtm_priority;
 #else
 			kr->r.priority = RTP_BGP;
@@ -2910,8 +2929,10 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			if (rtm->rtm_flags & RTF_DYNAMIC)
 				kr->r.flags |= F_DYNAMIC;
 			if (sa_in != NULL) {
+#if !__linux__
 				if (sa_in->sin_len == 0)
 					break;
+#endif
 				kr->r.prefixlen =
 				    mask2prefixlen(sa_in->sin_addr.s_addr);
 			} else if (rtm->rtm_flags & RTF_HOST)
@@ -2921,7 +2942,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 				    prefixlen_classful(kr->r.prefix.s_addr);
 			rtlabel_unref(kr->r.labelid);
 			kr->r.labelid = 0;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 			if ((label = (struct sockaddr_rtlabel *)
 			    rti_info[RTAX_LABEL]) != NULL) {
 				kr->r.flags |= F_RTLABEL;
@@ -2939,7 +2960,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			}
 
 			kr6->r.flags = F_KERNEL;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_priority support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_priority support. */
 			kr6->r.priority = rtm->rtm_priority;
 #else
 			kr->r.priority = RTP_BGP;
@@ -2959,8 +2980,10 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			if (rtm->rtm_flags & RTF_DYNAMIC)
 				kr6->r.flags |= F_DYNAMIC;
 			if (sa_in6 != NULL) {
+#if !__linux__
 				if (sa_in6->sin6_len == 0)
 					break;
+#endif
 				kr6->r.prefixlen = mask2prefixlen6(sa_in6);
 			} else if (rtm->rtm_flags & RTF_HOST)
 				kr6->r.prefixlen = 128;
@@ -2968,7 +2991,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 				fatalx("INET6 route without netmask");
 			rtlabel_unref(kr6->r.labelid);
 			kr6->r.labelid = 0;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no route labeling support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no route labeling support. */
 			if ((label = (struct sockaddr_rtlabel *)
 			    rti_info[RTAX_LABEL]) != NULL) {
 				kr6->r.flags |= F_RTLABEL;
@@ -3021,7 +3044,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			}
 
 		if (sa->sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_priority support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_priority support. */
 			if (rtm->rtm_priority == fib_prio)  {
 				send_rtmsg(kr_state.fd, RTM_DELETE, kt, &kr->r,
 				    fib_prio);
@@ -3035,7 +3058,7 @@ fetchtable(struct ktable *kt, u_int8_t fib_prio)
 			} else
 				kroute_insert(kt, kr);
 		} else if (sa->sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_priority support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_priority support. */
 			if (rtm->rtm_priority == fib_prio)  {
 				send_rt6msg(kr_state.fd, RTM_DELETE, kt,
 				    &kr6->r, fib_prio);
@@ -3105,7 +3128,7 @@ fetchifs(int ifindex)
 
 		kif->k.ifindex = ifm.ifm_index;
 		kif->k.flags = ifm.ifm_flags;
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no ifi_link_state member support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no ifi_link_state member support. */
 		kif->k.link_state = ifm.ifm_data.ifi_link_state;
 #endif
 		kif->k.if_type = ifm.ifm_data.ifi_type;
@@ -3166,7 +3189,7 @@ dispatch_rtmsg(void)
 		case RTM_ADD:
 		case RTM_CHANGE:
 		case RTM_DELETE:
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_hdrlen support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_hdrlen support. */
 			sa = (struct sockaddr *)(next + rtm->rtm_hdrlen);
 #else
 			sa = (struct sockaddr *)(next + sizeof(struct rt_msghdr));
@@ -3182,7 +3205,7 @@ dispatch_rtmsg(void)
 			if (rtm->rtm_flags & RTF_LLINFO) /* arp cache */
 				continue;
 
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no rtm_tableid support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no rtm_tableid support. */
 			if ((kt = ktable_get(rtm->rtm_tableid)) == NULL)
 #else
 			if ((kt = ktable_get(0)) == NULL)
@@ -3248,7 +3271,7 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
 		mpath = 1;
 #endif
 
-#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)) /* FreeBSD/MacOSX has no member rtm_priority support. */
+#if !(defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__) /* FreeBSD/MacOSX/Linux has no member rtm_priority support. */
 	prio = rtm->rtm_priority;
 #else
 	prio = RTP_BGP;
@@ -3259,7 +3282,9 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
 		prefix.v4.s_addr = ((struct sockaddr_in *)sa)->sin_addr.s_addr;
 		sa_in = (struct sockaddr_in *)rti_info[RTAX_NETMASK];
 		if (sa_in != NULL) {
+#if !__linux__
 			if (sa_in->sin_len != 0)
+#endif
 				prefixlen = mask2prefixlen(
 				    sa_in->sin_addr.s_addr);
 		} else if (rtm->rtm_flags & RTF_HOST)
@@ -3274,7 +3299,9 @@ dispatch_rtmsg_addr(struct rt_msghdr *rtm, struct sockaddr *rti_info[RTAX_MAX],
 		    sizeof(struct in6_addr));
 		sa_in6 = (struct sockaddr_in6 *)rti_info[RTAX_NETMASK];
 		if (sa_in6 != NULL) {
+#if !__linux__
 			if (sa_in6->sin6_len != 0)
+#endif
 				prefixlen = mask2prefixlen6(sa_in6);
 		} else if (rtm->rtm_flags & RTF_HOST)
 			prefixlen = 128;

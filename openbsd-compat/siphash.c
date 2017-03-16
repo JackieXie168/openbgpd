@@ -44,8 +44,12 @@
  */
 
 #include <sys/types.h>
+#ifdef __linux__
+#elif defined(darwin) || defined(__APPLE__) || defined(MACOSX)
 #include <machine/endian.h>
-
+#elif defined(__FreeBSD__)
+#include <sys/endian.h>
+#endif
 #include <string.h>
 #include "siphash.h"
 

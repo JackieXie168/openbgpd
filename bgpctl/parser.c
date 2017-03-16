@@ -33,6 +33,8 @@
 #include "parser.h"
 #include "irrfilter.h"
 
+int optreset = 0;
+
 enum token_type {
 	NOTOKEN,
 	ENDTOKEN,

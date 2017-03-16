@@ -34,6 +34,14 @@
 # endif
 #endif
 
+#if !defined(SS_LEN1)
+# if defined(HAVE_STRUCT_SOCKADDR_SS_LEN)
+#  define SS_LEN1(x)	((x).ss_len)
+# else
+#  define SS_LEN1(x)	SA_LEN((struct sockaddr*)(x))
+# endif
+#endif
+
 #ifndef SYSCONFDIR
 # define SYSCONFDIR "/usr/local/etc"
 #endif

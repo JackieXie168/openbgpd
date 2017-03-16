@@ -22,8 +22,11 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <net/if.h>
+#if !__linux__
 #include <net/if_media.h>
 #include <net/if_types.h>
+#else
+#endif
 
 #include <err.h>
 #include <errno.h>
@@ -776,7 +779,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 				printf("  Last error: %s\n\n", errstr);
 		} else {
 			if (getnameinfo((struct sockaddr *)&p->sa_local,
-			    (socklen_t)p->sa_local.ss_len,
+			    SS_LEN1((socklen_t)p->sa_local),
 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
 				strlcpy(buf, "(unknown)", sizeof(buf));
@@ -786,7 +789,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			    pbuf);
 
 			if (getnameinfo((struct sockaddr *)&p->sa_remote,
-			    (socklen_t)p->sa_remote.ss_len,
+			    SS_LEN1((socklen_t)p->sa_remote),
 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
 				strlcpy(buf, "(unknown)", sizeof(buf));

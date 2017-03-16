@@ -62,7 +62,7 @@
 #define PFD_SOCK_PFKEY		5
 #define PFD_LISTENERS_START	6
 
-#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__
 #define LINK_STATE_IS_UP(_s)  ((_s) >= LINK_STATE_UP)
 #endif
 
@@ -1160,7 +1160,7 @@ session_connect(struct peer *peer)
 
 	/* if update source is set we need to bind() */
 	if ((sa = addr2sa(&peer->conf.local_addr, 0)) != NULL) {
-		if (bind(peer->fd, sa, sa->sa_len) == -1) {
+		if (bind(peer->fd, sa, SA_LEN(sa)) == -1) {
 			log_peer_warn(&peer->conf, "session_connect bind");
 			bgp_fsm(peer, EVNT_CON_OPENFAIL);
 			return (-1);
@@ -1173,7 +1173,7 @@ session_connect(struct peer *peer)
 	}
 
 	sa = addr2sa(&peer->conf.remote_addr, BGP_PORT);
-	if (connect(peer->fd, sa, sa->sa_len) == -1) {
+	if (connect(peer->fd, sa, SA_LEN(sa)) == -1) {
 		if (errno != EINPROGRESS) {
 			if (errno != peer->lasterr)
 				log_peer_warn(&peer->conf, "connect");

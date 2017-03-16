@@ -105,7 +105,7 @@ carp_demote_shutdown(void)
 int
 carp_demote_get(char *group)
 {
-#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__
 		return (-1);
 #else
 	int			s;
@@ -163,7 +163,7 @@ carp_demote_set(char *group, int demote)
 int
 carp_demote_ioctl(char *group, int demote)
 {
-#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX)
+#if defined(__FreeBSD__) || defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__
 		return (-1);
 #else
 	int			s, res;

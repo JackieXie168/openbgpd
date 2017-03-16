@@ -26,8 +26,12 @@
 
 #include "irrfilter.h"
 
+#if __linux__
+void irr_main(u_int32_t AS, int flags, char *outdir)
+#else
 __dead void
 irr_main(u_int32_t AS, int flags, char *outdir)
+#endif
 {
 	char	*query;
 	int	 r;

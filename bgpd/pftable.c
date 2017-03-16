@@ -22,7 +22,7 @@
 
 #include <netinet/in.h>
 #include <net/if.h>
-#if !(defined(darwin) || defined(__APPLE__) || defined(MACOSX))
+#if !(defined(darwin) || defined(__APPLE__) || defined(MACOSX) || __linux__)
 #include <net/pfvar.h>
 #else
 #include <sys/param.h>

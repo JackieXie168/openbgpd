@@ -101,7 +101,11 @@ struct prefix_set {
 			*ps-- = '\0';			\
 	} while (0);
 
-__dead void		 irr_main(u_int32_t, int, char *);
+#if __linux__
+void		 irr_main(u_int32_t, int, char *);
+#else
+__dead		void irr_main(u_int32_t, int, char *);
+#endif
 int			 whois(const char *, enum qtype);
 int			 parse_response(FILE *, enum qtype);
 int			 write_filters(char *);
