@@ -1,4 +1,4 @@
-/*	$OpenBSD: whois.c,v 1.3 2007/03/05 16:43:24 henning Exp $ */
+/*	$OpenBSD: whois.c,v 1.5 2013/10/27 18:49:25 guenther Exp $ */
 
 /*
  * Copyright (c) 2007 Henning Brauer <henning@openbsd.org>
@@ -68,7 +68,8 @@ char *qtype_opts[] = {
 	"",
 	"-T aut-num",
 	"-K -T as-set",
-	"-K -T route -i origin"
+	"-K -T route -i origin",
+	"-K -T route6 -i origin"
 };
 
 char	*server = "whois.radb.net";
@@ -81,7 +82,6 @@ whois(const char *query, enum qtype qtype)
 	int		 s, r = -1, error = 0, attempt, ret;
 	struct addrinfo	 hints, *res, *ai;
 	const char	*reason = NULL;
-	char		*fmt;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = 0;
@@ -136,8 +136,7 @@ whois(const char *query, enum qtype qtype)
 	sfw = fdopen(s, "w");
 	if (sfr == NULL || sfw == NULL)
 		err(1, "fdopen");
-	fmt = "%s %s %s\r\n";
-	fprintf(sfw, fmt, WHOIS_STDOPTS, qtype_opts[qtype], query);
+	fprintf(sfw, "%s %s %s\r\n", WHOIS_STDOPTS, qtype_opts[qtype], query);
 	fflush(sfw);
 
 	if ((ret = parse_response(sfr, qtype)) == -1)

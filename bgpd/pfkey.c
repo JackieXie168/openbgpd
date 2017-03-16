@@ -1,4 +1,4 @@
-/*	$OpenBSD: pfkey.c,v 1.37 2009/04/21 15:25:52 henning Exp $ */
+/*	$OpenBSD: pfkey.c,v 1.48 2017/03/02 19:54:22 renato Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -20,8 +20,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#if __linux__
+#include <linux/pfkeyv2.h>
+#else
 #include <net/pfkeyv2.h>
+#endif
+#ifdef __OpenBSD__
 #include <netinet/ip_ipsp.h>
+#endif
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -31,6 +37,7 @@
 
 #include "bgpd.h"
 #include "session.h"
+#include "log.h"
 
 #define	PFKEY2_CHUNK sizeof(u_int64_t)
 #define	ROUNDUP(x) (((x) + (PFKEY2_CHUNK - 1)) & ~(PFKEY2_CHUNK - 1))
@@ -74,6 +81,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 	int			len = 0;
 	int			iov_cnt;
 	struct sockaddr_storage	ssrc, sdst, speer, smask, dmask;
+	struct sockaddr		*saptr;
 
 	if (!pid)
 		pid = getpid();
@@ -81,55 +89,45 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 	/* we need clean sockaddr... no ports set */
 	bzero(&ssrc, sizeof(ssrc));
 	bzero(&smask, sizeof(smask));
-	switch (src->af) {
-	case AF_INET:
-		((struct sockaddr_in *)&ssrc)->sin_addr = src->v4;
-		ssrc.ss_len = sizeof(struct sockaddr_in);
-		ssrc.ss_family = AF_INET;
+	if ((saptr = addr2sa(src, 0)))
+		memcpy(&ssrc, saptr, sizeof(ssrc));
+	switch (src->aid) {
+	case AID_INET:
 		memset(&((struct sockaddr_in *)&smask)->sin_addr, 0xff, 32/8);
 		break;
-	case AF_INET6:
-		memcpy(&((struct sockaddr_in6 *)&ssrc)->sin6_addr,
-		    &src->v6, sizeof(struct in6_addr));
-		ssrc.ss_len = sizeof(struct sockaddr_in6);
-		ssrc.ss_family = AF_INET6;
+	case AID_INET6:
 		memset(&((struct sockaddr_in6 *)&smask)->sin6_addr, 0xff,
 		    128/8);
 		break;
-	case 0:
-		ssrc.ss_len = sizeof(struct sockaddr);
+	case AID_UNSPEC:
+		SET_STORAGE_LEN(ssrc, sizeof(struct sockaddr));
 		break;
 	default:
 		return (-1);
 	}
 	smask.ss_family = ssrc.ss_family;
-	smask.ss_len = ssrc.ss_len;
+	SET_STORAGE_LEN(smask, STORAGE_LEN(ssrc));
 
 	bzero(&sdst, sizeof(sdst));
 	bzero(&dmask, sizeof(dmask));
-	switch (dst->af) {
-	case AF_INET:
-		((struct sockaddr_in *)&sdst)->sin_addr = dst->v4;
-		sdst.ss_len = sizeof(struct sockaddr_in);
-		sdst.ss_family = AF_INET;
+	if ((saptr = addr2sa(dst, 0)))
+		memcpy(&sdst, saptr, sizeof(sdst));
+	switch (dst->aid) {
+	case AID_INET:
 		memset(&((struct sockaddr_in *)&dmask)->sin_addr, 0xff, 32/8);
 		break;
-	case AF_INET6:
-		memcpy(&((struct sockaddr_in6 *)&sdst)->sin6_addr,
-		    &dst->v6, sizeof(struct in6_addr));
-		sdst.ss_len = sizeof(struct sockaddr_in6);
-		sdst.ss_family = AF_INET6;
+	case AID_INET6:
 		memset(&((struct sockaddr_in6 *)&dmask)->sin6_addr, 0xff,
 		    128/8);
 		break;
-	case 0:
-		sdst.ss_len = sizeof(struct sockaddr);
+	case AID_UNSPEC:
+		SET_STORAGE_LEN(sdst, sizeof(struct sockaddr));
 		break;
 	default:
 		return (-1);
 	}
 	dmask.ss_family = sdst.ss_family;
-	dmask.ss_len = sdst.ss_len;
+	SET_STORAGE_LEN(dmask, STORAGE_LEN(sdst));
 
 	bzero(&smsg, sizeof(smsg));
 	smsg.sadb_msg_version = PF_KEY_V2;
@@ -155,7 +153,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		sa.sadb_sa_exttype = SADB_EXT_SA;
 		sa.sadb_sa_len = sizeof(sa) / 8;
 		sa.sadb_sa_replay = 0;
-		sa.sadb_sa_spi = spi;
+		sa.sadb_sa_spi = htonl(spi);
 		sa.sadb_sa_state = SADB_SASTATE_MATURE;
 		break;
 	case SADB_X_ADDFLOW:
@@ -176,11 +174,11 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 
 	bzero(&sa_src, sizeof(sa_src));
 	sa_src.sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
-	sa_src.sadb_address_len = (sizeof(sa_src) + ROUNDUP(ssrc.ss_len)) / 8;
+	sa_src.sadb_address_len = (sizeof(sa_src) + ROUNDUP(STORAGE_LEN(ssrc))) / 8;
 
 	bzero(&sa_dst, sizeof(sa_dst));
 	sa_dst.sadb_address_exttype = SADB_EXT_ADDRESS_DST;
-	sa_dst.sadb_address_len = (sizeof(sa_dst) + ROUNDUP(sdst.ss_len)) / 8;
+	sa_dst.sadb_address_len = (sizeof(sa_dst) + ROUNDUP(STORAGE_LEN(sdst))) / 8;
 
 	sa.sadb_sa_auth = aalg;
 	sa.sadb_sa_encrypt = SADB_X_EALG_AES; /* XXX */
@@ -213,16 +211,16 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		}
 		sa_peer.sadb_address_exttype = SADB_EXT_ADDRESS_DST;
 		sa_peer.sadb_address_len =
-		    (sizeof(sa_peer) + ROUNDUP(speer.ss_len)) / 8;
+		    (sizeof(sa_peer) + ROUNDUP(STORAGE_LEN(speer))) / 8;
 
 		/* for addflow we also use src/dst as the flow destination */
 		sa_src.sadb_address_exttype = SADB_X_EXT_SRC_FLOW;
 		sa_dst.sadb_address_exttype = SADB_X_EXT_DST_FLOW;
 
 		bzero(&smask, sizeof(smask));
-		switch (src->af) {
-		case AF_INET:
-			smask.ss_len = sizeof(struct sockaddr_in);
+		switch (src->aid) {
+		case AID_INET:
+			SET_STORAGE_LEN(smask, sizeof(struct sockaddr_in));
 			smask.ss_family = AF_INET;
 			memset(&((struct sockaddr_in *)&smask)->sin_addr,
 			    0xff, 32/8);
@@ -233,8 +231,8 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 				    htons(0xffff);
 			}
 			break;
-		case AF_INET6:
-			smask.ss_len = sizeof(struct sockaddr_in6);
+		case AID_INET6:
+			SET_STORAGE_LEN(smask, sizeof(struct sockaddr_in6));
 			smask.ss_family = AF_INET6;
 			memset(&((struct sockaddr_in6 *)&smask)->sin6_addr,
 			    0xff, 128/8);
@@ -247,9 +245,9 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 			break;
 		}
 		bzero(&dmask, sizeof(dmask));
-		switch (dst->af) {
-		case AF_INET:
-			dmask.ss_len = sizeof(struct sockaddr_in);
+		switch (dst->aid) {
+		case AID_INET:
+			SET_STORAGE_LEN(dmask, sizeof(struct sockaddr_in));
 			dmask.ss_family = AF_INET;
 			memset(&((struct sockaddr_in *)&dmask)->sin_addr,
 			    0xff, 32/8);
@@ -260,8 +258,8 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 				    htons(0xffff);
 			}
 			break;
-		case AF_INET6:
-			dmask.ss_len = sizeof(struct sockaddr_in6);
+		case AID_INET6:
+			SET_STORAGE_LEN(dmask, sizeof(struct sockaddr_in6));
 			dmask.ss_family = AF_INET6;
 			memset(&((struct sockaddr_in6 *)&dmask)->sin6_addr,
 			    0xff, 128/8);
@@ -277,12 +275,12 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		bzero(&sa_smask, sizeof(sa_smask));
 		sa_smask.sadb_address_exttype = SADB_X_EXT_SRC_MASK;
 		sa_smask.sadb_address_len =
-		    (sizeof(sa_smask) + ROUNDUP(smask.ss_len)) / 8;
+		    (sizeof(sa_smask) + ROUNDUP(STORAGE_LEN(smask))) / 8;
 
 		bzero(&sa_dmask, sizeof(sa_dmask));
 		sa_dmask.sadb_address_exttype = SADB_X_EXT_DST_MASK;
 		sa_dmask.sadb_address_len =
-		    (sizeof(sa_dmask) + ROUNDUP(dmask.ss_len)) / 8;
+		    (sizeof(sa_dmask) + ROUNDUP(STORAGE_LEN(dmask))) / 8;
 		break;
 	}
 
@@ -316,7 +314,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		iov[iov_cnt].iov_len = sizeof(sa_peer);
 		iov_cnt++;
 		iov[iov_cnt].iov_base = &speer;
-		iov[iov_cnt].iov_len = ROUNDUP(speer.ss_len);
+		iov[iov_cnt].iov_len = ROUNDUP(STORAGE_LEN(speer));
 		smsg.sadb_msg_len += sa_peer.sadb_address_len;
 		iov_cnt++;
 
@@ -339,7 +337,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		iov[iov_cnt].iov_len = sizeof(sa_smask);
 		iov_cnt++;
 		iov[iov_cnt].iov_base = &smask;
-		iov[iov_cnt].iov_len = ROUNDUP(smask.ss_len);
+		iov[iov_cnt].iov_len = ROUNDUP(STORAGE_LEN(smask));
 		smsg.sadb_msg_len += sa_smask.sadb_address_len;
 		iov_cnt++;
 
@@ -347,7 +345,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 		iov[iov_cnt].iov_len = sizeof(sa_dmask);
 		iov_cnt++;
 		iov[iov_cnt].iov_base = &dmask;
-		iov[iov_cnt].iov_len = ROUNDUP(dmask.ss_len);
+		iov[iov_cnt].iov_len = ROUNDUP(STORAGE_LEN(dmask));
 		smsg.sadb_msg_len += sa_dmask.sadb_address_len;
 		iov_cnt++;
 		break;
@@ -358,7 +356,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 	iov[iov_cnt].iov_len = sizeof(sa_dst);
 	iov_cnt++;
 	iov[iov_cnt].iov_base = &sdst;
-	iov[iov_cnt].iov_len = ROUNDUP(sdst.ss_len);
+	iov[iov_cnt].iov_len = ROUNDUP(STORAGE_LEN(sdst));
 	smsg.sadb_msg_len += sa_dst.sadb_address_len;
 	iov_cnt++;
 
@@ -367,7 +365,7 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 	iov[iov_cnt].iov_len = sizeof(sa_src);
 	iov_cnt++;
 	iov[iov_cnt].iov_base = &ssrc;
-	iov[iov_cnt].iov_len = ROUNDUP(ssrc.ss_len);
+	iov[iov_cnt].iov_len = ROUNDUP(STORAGE_LEN(ssrc));
 	smsg.sadb_msg_len += sa_src.sadb_address_len;
 	iov_cnt++;
 
@@ -411,6 +409,37 @@ pfkey_send(int sd, uint8_t satype, uint8_t mtype, uint8_t dir,
 }
 
 int
+pfkey_read(int sd, struct sadb_msg *h)
+{
+	struct sadb_msg hdr;
+
+	if (recv(sd, &hdr, sizeof(hdr), MSG_PEEK) != sizeof(hdr)) {
+		if (errno == EAGAIN || errno == EINTR)
+			return (0);
+		log_warn("pfkey peek");
+		return (-1);
+	}
+
+	/* XXX: Only one message can be outstanding. */
+	if (hdr.sadb_msg_seq == sadb_msg_seq &&
+	    hdr.sadb_msg_pid == pid) {
+		if (h)
+			bcopy(&hdr, h, sizeof(hdr));
+		return (0);
+	}
+
+	/* not ours, discard */
+	if (read(sd, &hdr, sizeof(hdr)) == -1) {
+		if (errno == EAGAIN || errno == EINTR)
+			return (0);
+		log_warn("pfkey read");
+		return (-1);
+	}
+
+	return (1);
+}
+
+int
 pfkey_reply(int sd, u_int32_t *spip)
 {
 	struct sadb_msg hdr, *msg;
@@ -418,23 +447,13 @@ pfkey_reply(int sd, u_int32_t *spip)
 	struct sadb_sa *sa;
 	u_int8_t *data;
 	ssize_t len;
+	int rv;
 
-	for (;;) {
-		if (recv(sd, &hdr, sizeof(hdr), MSG_PEEK) != sizeof(hdr)) {
-			log_warn("pfkey peek");
+	do {
+		rv = pfkey_read(sd, &hdr);
+		if (rv == -1)
 			return (-1);
-		}
-
-		if (hdr.sadb_msg_seq == sadb_msg_seq &&
-		    hdr.sadb_msg_pid == pid)
-			break;
-
-		/* not ours, discard */
-		if (read(sd, &hdr, sizeof(hdr)) == -1) {
-			log_warn("pfkey read");
-			return (-1);
-		}
-	}
+	} while (rv);
 
 	if (hdr.sadb_msg_errno != 0) {
 		errno = hdr.sadb_msg_errno;
@@ -445,21 +464,21 @@ pfkey_reply(int sd, u_int32_t *spip)
 			return (-1);
 		}
 	}
-	len = hdr.sadb_msg_len * PFKEY2_CHUNK;
-	if ((data = malloc(len)) == NULL) {
+	if ((data = reallocarray(NULL, hdr.sadb_msg_len, PFKEY2_CHUNK)) == NULL) {
 		log_warn("pfkey malloc");
 		return (-1);
 	}
+	len = hdr.sadb_msg_len * PFKEY2_CHUNK;
 	if (read(sd, data, len) != len) {
 		log_warn("pfkey read");
-		bzero(data, len);
+		explicit_bzero(data, len);
 		free(data);
 		return (-1);
 	}
 
 	if (hdr.sadb_msg_type == SADB_GETSPI) {
 		if (spip == NULL) {
-			bzero(data, len);
+			explicit_bzero(data, len);
 			free(data);
 			return (0);
 		}
@@ -477,7 +496,7 @@ pfkey_reply(int sd, u_int32_t *spip)
 			}
 		}
 	}
-	bzero(data, len);
+	explicit_bzero(data, len);
 	free(data);
 	return (0);
 }
@@ -726,15 +745,14 @@ pfkey_remove(struct peer *p)
 int
 pfkey_init(struct bgpd_sysdep *sysdep)
 {
-	if ((fd = socket(PF_KEY, SOCK_RAW, PF_KEY_V2)) == -1) {
+	if ((fd = socket(PF_KEY, SOCK_RAW | SOCK_CLOEXEC | SOCK_NONBLOCK,
+	    PF_KEY_V2)) == -1) {
 		if (errno == EPROTONOSUPPORT) {
 			log_warnx("PF_KEY not available, disabling ipsec");
 			sysdep->no_pfkey = 1;
-			return (0);
-		} else {
-			log_warn("PF_KEY socket");
 			return (-1);
-		}
+		} else
+			fatal("pfkey setup failed");
 	}
-	return (0);
+	return (fd);
 }

@@ -29,8 +29,14 @@
 #if !defined(SS_LEN)
 # if defined(HAVE_STRUCT_SOCKADDR_SS_LEN)
 #  define SS_LEN(x)  ((x)->ss_len)
+#  define SET_SS_LEN(x, y) do { SS_LEN(x) = (y); } while(0)
+#  define STORAGE_LEN(X) (X.ss_len)
+#  define SET_STORAGE_LEN(X, Y) do { STORAGE_LEN(X) = (Y); } while(0)
 # else
 #  define SS_LEN(x)  SA_LEN((struct sockaddr *)&(x))
+#  define SET_SS_LEN(x, y) (void) 0
+#  define STORAGE_LEN(x) SA_LEN((struct sockaddr*)(x))
+#  define SET_STORAGE_LEN(X, Y) (void) 0
 # endif
 #endif
 
@@ -175,6 +181,22 @@ typedef unsigned long long int u_int64_t;
 
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
+#endif
+
+#ifndef TCP_MD5SIG
+#define TCP_MD5SIG 14
+#endif
+
+#ifndef IPV6_MINHOPCOUNT
+#define IPV6_MINHOPCOUNT 73
+#endif
+
+#ifndef IP_MINTTL
+#define IP_MINTTL 66
+#endif
+
+#ifndef SPI_RESERVED_MAX
+#define SPI_RESERVED_MAX        255
 #endif
 
 /* FSF bison 1.875 wants this to prevent conflicting definitions of YYSTYPE */

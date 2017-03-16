@@ -1,4 +1,4 @@
-/*	$OpenBSD: session.h,v 1.101 2009/06/05 20:26:38 claudio Exp $ */
+/*	$OpenBSD: session.h,v 1.122 2017/01/13 18:59:12 phessler Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -27,6 +27,7 @@
 #define	INTERVAL_HOLD			90
 #define	INTERVAL_IDLE_HOLD_INITIAL	30
 #define	INTERVAL_HOLD_CLONED		3600
+#define	INTERVAL_HOLD_DEMOTED		60
 #define	MAX_IDLE_HOLD			3600
 #define	MSGSIZE_HEADER			19
 #define	MSGSIZE_HEADER_MARKER		16
@@ -65,11 +66,6 @@ enum session_events {
 	EVNT_RCVD_NOTIFICATION
 };
 
-enum blockmodes {
-	BM_NORMAL,
-	BM_NONBLOCK
-};
-
 enum msg_type {
 	OPEN = 1,
 	UPDATE,
@@ -91,7 +87,16 @@ enum suberr_open {
 	ERR_OPEN_OPT,
 	ERR_OPEN_AUTH,
 	ERR_OPEN_HOLDTIME,
-	ERR_OPEN_CAPA
+	ERR_OPEN_CAPA,
+	ERR_OPEN_GROUP_CONFLICT,	/* draft-ietf-idr-bgp-multisession-07 */
+	ERR_OPEN_GROUP_REQUIRED		/* draft-ietf-idr-bgp-multisession-07 */
+};
+
+enum suberr_fsm {
+	ERR_FSM_UNSPECIFIC = 0,
+	ERR_FSM_UNEX_OPENSENT,
+	ERR_FSM_UNEX_OPENCONFIRM,
+	ERR_FSM_UNEX_ESTABLISHED
 };
 
 enum opt_params {
@@ -109,7 +114,7 @@ enum capa_codes {
 };
 
 struct bgp_msg {
-	struct buf	*buf;
+	struct ibuf	*buf;
 	enum msg_type	 type;
 	u_int16_t	 len;
 };
@@ -155,13 +160,16 @@ struct peer_stats {
 	u_int64_t		 msg_sent_rrefresh;
 	u_int64_t		 prefix_rcvd_update;
 	u_int64_t		 prefix_rcvd_withdraw;
+	u_int64_t		 prefix_rcvd_eor;
 	u_int64_t		 prefix_sent_update;
 	u_int64_t		 prefix_sent_withdraw;
+	u_int64_t		 prefix_sent_eor;
 	time_t			 last_updown;
 	time_t			 last_read;
 	u_int32_t		 prefix_cnt;
 	u_int8_t		 last_sent_errcode;
 	u_int8_t		 last_sent_suberr;
+	char			 last_shutcomm[SHUT_COMM_LEN];
 };
 
 enum Timer {
@@ -171,6 +179,8 @@ enum Timer {
 	Timer_Hold,
 	Timer_IdleHold,
 	Timer_IdleHoldReset,
+	Timer_CarpUndemote,
+	Timer_RestartTimeout,
 	Timer_Max
 };
 
@@ -188,6 +198,7 @@ struct peer {
 	struct {
 		struct capabilities	ann;
 		struct capabilities	peer;
+		struct capabilities	neg;
 	}			 capa;
 	struct {
 		struct bgpd_addr	local_addr;
@@ -200,8 +211,9 @@ struct peer {
 	struct sockaddr_storage	 sa_remote;
 	struct peer_timer_head	 timers;
 	struct msgbuf		 wbuf;
-	struct buf_read		*rbuf;
+	struct ibuf_read	*rbuf;
 	struct peer		*next;
+	struct peer		*template;
 	int			 fd;
 	int			 lasterr;
 	u_int			 errcnt;
@@ -212,50 +224,29 @@ struct peer {
 	u_int16_t		 short_as;
 	u_int16_t		 holdtime;
 	u_int8_t		 depend_ok;
+	u_int8_t		 demoted;
 	u_int8_t		 passive;
 };
 
-struct peer	*peers;
+extern struct peer	*peers;
+extern time_t		 pauseaccept;
 
 struct ctl_timer {
 	enum Timer	type;
 	time_t		val;
 };
 
-/* session.c */
-void		 session_socket_blockmode(int, enum blockmodes);
-pid_t		 session_main(struct bgpd_config *, struct peer *,
-		    struct network_head *, struct filter_head *,
-		    struct mrt_head *, struct rib_names *,
-		    int[2], int[2], int[2], int[2]);
-void		 bgp_fsm(struct peer *, enum session_events);
-int		 session_neighbor_rrefresh(struct peer *p);
-struct peer	*getpeerbyaddr(struct bgpd_addr *);
-struct peer	*getpeerbydesc(const char *);
-int		 imsg_compose_parent(int, pid_t, void *, u_int16_t);
-int		 imsg_compose_rde(int, pid_t, void *, u_int16_t);
-
-/* log.c */
-char		*log_fmt_peer(const struct peer_config *);
-void		 log_statechange(struct peer *, enum session_state,
-		    enum session_events);
-void		 log_notification(const struct peer *, u_int8_t, u_int8_t,
-		    u_char *, u_int16_t);
-void		 log_conn_attempt(const struct peer *, struct sockaddr *);
-
-/* parse.y */
-int	 parse_config(char *, struct bgpd_config *, struct mrt_head *,
-	    struct peer **, struct network_head *, struct filter_head *);
+/* carp.c */
+int	 carp_demote_init(char *, int);
+void	 carp_demote_shutdown(void);
+int	 carp_demote_get(char *);
+int	 carp_demote_set(char *, int);
 
 /* config.c */
 int	 merge_config(struct bgpd_config *, struct bgpd_config *,
-	    struct peer *, struct listen_addrs *);
+	    struct peer *);
 void	 prepare_listeners(struct bgpd_config *);
-
-/* rde.c */
-pid_t	 rde_main(struct bgpd_config *, struct peer *, struct network_head *,
-	    struct filter_head *, struct mrt_head *, struct rib_names *,
-	    int[2], int[2], int[2], int[2], int);
+int	 get_mpe_label(struct rdomain *);
 
 /* control.c */
 int	control_init(int, char *);
@@ -264,7 +255,26 @@ void	control_shutdown(int);
 int	control_dispatch_msg(struct pollfd *, u_int *);
 unsigned int	control_accept(int, int);
 
+/* log.c */
+char		*log_fmt_peer(const struct peer_config *);
+void		 log_statechange(struct peer *, enum session_state,
+		    enum session_events);
+void		 log_notification(const struct peer *, u_int8_t, u_int8_t,
+		    u_char *, u_int16_t, const char *);
+void		 log_conn_attempt(const struct peer *, struct sockaddr *);
+
+/* mrt.c */
+void		 mrt_dump_bgp_msg(struct mrt *, void *, u_int16_t,
+		     struct peer *);
+void		 mrt_dump_state(struct mrt *, u_int16_t, u_int16_t,
+		     struct peer *);
+void		 mrt_done(void *);
+
+/* parse.y */
+int	 parse_config(char *, struct bgpd_config *, struct peer **);
+
 /* pfkey.c */
+int	pfkey_read(int, struct sadb_msg *);
 int	pfkey_establish(struct peer *);
 int	pfkey_remove(struct peer *);
 int	pfkey_init(struct bgpd_sysdep *);
@@ -272,9 +282,23 @@ int	pfkey_init(struct bgpd_sysdep *);
 /* printconf.c */
 void	print_config(struct bgpd_config *, struct rib_names *,
 	    struct network_head *, struct peer *, struct filter_head *,
-	    struct mrt_head *);
+	    struct mrt_head *, struct rdomain_head *);
+
+/* rde.c */
+void	 rde_main(int, int);
+
+/* session.c */
+void		 session_main(int, int);
+void		 bgp_fsm(struct peer *, enum session_events);
+int		 session_neighbor_rrefresh(struct peer *p);
+struct peer	*getpeerbyaddr(struct bgpd_addr *);
+struct peer	*getpeerbydesc(const char *);
+int		 imsg_ctl_parent(int, u_int32_t, pid_t, void *, u_int16_t);
+int		 imsg_ctl_rde(int, pid_t, void *, u_int16_t);
+void	 	 session_stop(struct peer *, u_int8_t);
 
 /* timer.c */
+time_t			 getmonotime(void);
 struct peer_timer	*timer_get(struct peer *, enum Timer);
 struct peer_timer	*timer_nextisdue(struct peer *);
 time_t			 timer_nextduein(struct peer *);

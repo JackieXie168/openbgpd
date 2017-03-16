@@ -1,4 +1,4 @@
-/*	$OpenBSD: log.c,v 1.50 2007/04/23 13:04:24 claudio Exp $ */
+/*	$OpenBSD: log.c,v 1.63 2017/01/24 04:22:42 benno Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
@@ -31,49 +32,42 @@
 #include "session.h"
 #include "log.h"
 
-int	debug;
-
-void	 logit(int, const char *, ...);
-
-char *
-log_fmt_peer(const struct peer_config *peer)
-{
-	const char	*ip;
-	char		*pfmt, *p;
-
-	ip = log_addr(&peer->remote_addr);
-	if ((peer->remote_addr.af == AF_INET && peer->remote_masklen != 32) ||
-	    (peer->remote_addr.af == AF_INET6 && peer->remote_masklen != 128)) {
-		if (asprintf(&p, "%s/%u", ip, peer->remote_masklen) == -1)
-			fatal(NULL);
-	} else {
-		if ((p = strdup(ip)) == NULL)
-			fatal(NULL);
-	}
-
-	if (peer->descr[0]) {
-		if (asprintf(&pfmt, "neighbor %s (%s)", p, peer->descr) ==
-		    -1)
-			fatal(NULL);
-	} else {
-		if (asprintf(&pfmt, "neighbor %s", p) == -1)
-			fatal(NULL);
-	}
-	free(p);
-	return (pfmt);
-}
+static int		 debug;
+static int		 verbose;
+static const char	*log_procname;
 
 void
-log_init(int n_debug)
+log_init(int n_debug, int facility)
 {
 	extern char	*__progname;
 
 	debug = n_debug;
+	verbose = n_debug;
+	log_procinit(__progname);
 
 	if (!debug)
-		openlog(__progname, LOG_PID | LOG_NDELAY, LOG_DAEMON);
+		openlog(__progname, LOG_PID | LOG_NDELAY, facility);
 
 	tzset();
+}
+
+void
+log_procinit(const char *procname)
+{
+	if (procname != NULL)
+		log_procname = procname;
+}
+
+void
+log_setverbose(int v)
+{
+	verbose = v;
+}
+
+int
+log_getverbose(void)
+{
+	return (verbose);
 }
 
 void
@@ -90,6 +84,7 @@ void
 vlog(int pri, const char *fmt, va_list ap)
 {
 	char	*nfmt;
+	int	 saved_errno = errno;
 
 	if (debug) {
 		/* best effort in out of mem situations */
@@ -103,69 +98,36 @@ vlog(int pri, const char *fmt, va_list ap)
 		fflush(stderr);
 	} else
 		vsyslog(pri, fmt, ap);
-}
 
-
-void
-log_peer_warn(const struct peer_config *peer, const char *emsg, ...)
-{
-	char	*p, *nfmt;
-	va_list	 ap;
-
-	p = log_fmt_peer(peer);
-	if (emsg == NULL) {
-		if (asprintf(&nfmt, "%s: %s", p, strerror(errno)) == -1)
-			fatal(NULL);
-	} else {
-		if (asprintf(&nfmt, "%s: %s: %s", p, emsg, strerror(errno)) ==
-		    -1)
-			fatal(NULL);
-	}
-	va_start(ap, emsg);
-	vlog(LOG_CRIT, nfmt, ap);
-	va_end(ap);
-	free(p);
-	free(nfmt);
-}
-
-void
-log_peer_warnx(const struct peer_config *peer, const char *emsg, ...)
-{
-	char	*p, *nfmt;
-	va_list	 ap;
-
-	p = log_fmt_peer(peer);
-	if (asprintf(&nfmt, "%s: %s", p, emsg) == -1)
-		fatal(NULL);
-	va_start(ap, emsg);
-	vlog(LOG_CRIT, nfmt, ap);
-	va_end(ap);
-	free(p);
-	free(nfmt);
+	errno = saved_errno;
 }
 
 void
 log_warn(const char *emsg, ...)
 {
-	char	*nfmt;
-	va_list	 ap;
+	char		*nfmt;
+	va_list		 ap;
+	int		 saved_errno = errno;
 
 	/* best effort to even work in out of memory situations */
 	if (emsg == NULL)
-		logit(LOG_CRIT, "%s", strerror(errno));
+		logit(LOG_CRIT, "%s", strerror(saved_errno));
 	else {
 		va_start(ap, emsg);
 
-		if (asprintf(&nfmt, "%s: %s", emsg, strerror(errno)) == -1) {
+		if (asprintf(&nfmt, "%s: %s", emsg,
+		    strerror(saved_errno)) == -1) {
 			/* we tried it... */
 			vlog(LOG_CRIT, emsg, ap);
-			logit(LOG_CRIT, "%s", strerror(errno));
+			logit(LOG_CRIT, "%s", strerror(saved_errno));
 		} else {
 			vlog(LOG_CRIT, nfmt, ap);
 			free(nfmt);
 		}
 		va_end(ap);
 	}
+
+	errno = saved_errno;
 }
 
 void
@@ -193,134 +155,51 @@ log_debug(const char *emsg, ...)
 {
 	va_list	 ap;
 
-	if (debug) {
+	if (verbose) {
 		va_start(ap, emsg);
 		vlog(LOG_DEBUG, emsg, ap);
 		va_end(ap);
 	}
 }
 
-void
-fatal(const char *emsg)
+static void
+vfatalc(int code, const char *emsg, va_list ap)
 {
-	if (emsg == NULL)
-		logit(LOG_CRIT, "fatal in %s: %s", procnames[bgpd_process],
-		    strerror(errno));
-	else
-		if (errno)
-			logit(LOG_CRIT, "fatal in %s: %s: %s",
-			    procnames[bgpd_process], emsg, strerror(errno));
-		else
-			logit(LOG_CRIT, "fatal in %s: %s",
-			    procnames[bgpd_process], emsg);
+	static char	s[BUFSIZ];
+	const char	*sep;
 
-	if (bgpd_process == PROC_MAIN)
-		exit(1);
-	else				/* parent copes via SIGCHLD */
-		_exit(1);
-}
-
-void
-fatalx(const char *emsg)
-{
-	errno = 0;
-	fatal(emsg);
-}
-
-void
-log_statechange(struct peer *peer, enum session_state nstate,
-    enum session_events event)
-{
-	char	*p;
-
-	/* don't clutter the logs with constant Connect -> Active -> Connect */
-	if (nstate == STATE_CONNECT && peer->state == STATE_ACTIVE &&
-	    peer->prev_state == STATE_CONNECT)
-		return;
-	if (nstate == STATE_ACTIVE && peer->state == STATE_CONNECT &&
-	    peer->prev_state == STATE_ACTIVE)
-		return;
-
-	peer->lasterr = 0;
-	p = log_fmt_peer(&peer->conf);
-	logit(LOG_INFO, "%s: state change %s -> %s, reason: %s",
-	    p, statenames[peer->state], statenames[nstate], eventnames[event]);
-	free(p);
-}
-
-void
-log_notification(const struct peer *peer, u_int8_t errcode, u_int8_t subcode,
-    u_char *data, u_int16_t datalen)
-{
-	char		*p;
-	const char	*suberrname = NULL;
-	int		 uk = 0;
-
-	p = log_fmt_peer(&peer->conf);
-	switch (errcode) {
-	case ERR_HEADER:
-		if (subcode >= sizeof(suberr_header_names)/sizeof(char *))
-			uk = 1;
-		else
-			suberrname = suberr_header_names[subcode];
-		break;
-	case ERR_OPEN:
-		if (subcode >= sizeof(suberr_open_names)/sizeof(char *))
-			uk = 1;
-		else
-			suberrname = suberr_open_names[subcode];
-		break;
-	case ERR_UPDATE:
-		if (subcode >= sizeof(suberr_update_names)/sizeof(char *))
-			uk = 1;
-		else
-			suberrname = suberr_update_names[subcode];
-		break;
-	case ERR_CEASE:
-		if (subcode >= sizeof(suberr_cease_names)/sizeof(char *))
-			uk = 1;
-		else
-			suberrname = suberr_cease_names[subcode];
-		break;
-	case ERR_HOLDTIMEREXPIRED:
-	case ERR_FSM:
-		uk = 1;
-		break;
-	default:
-		logit(LOG_CRIT, "%s: received notification, unknown errcode "
-		    "%u, subcode %u", p, errcode, subcode);
-		free(p);
-		return;
-	}
-
-	if (uk)
-		logit(LOG_CRIT,
-		    "%s: received notification: %s, unknown subcode %u",
-		    p, errnames[errcode], subcode);
-	else {
-		if (suberrname == NULL)
-			logit(LOG_CRIT, "%s: received notification: %s",
-			    p, errnames[errcode]);
-		else
-			logit(LOG_CRIT, "%s: received notification: %s, %s",
-			    p, errnames[errcode], suberrname);
-	}
-	free(p);
-}
-
-void
-log_conn_attempt(const struct peer *peer, struct sockaddr *sa)
-{
-	char		*p;
-	const char	*b;
-
-	if (peer == NULL) {	/* connection from non-peer, drop */
-		b = log_sockaddr(sa);
-		logit(LOG_INFO, "connection from non-peer %s refused", b);
+	if (emsg != NULL) {
+		(void)vsnprintf(s, sizeof(s), emsg, ap);
+		sep = ": ";
 	} else {
-		p = log_fmt_peer(&peer->conf);
-		logit(LOG_INFO, "Connection attempt from %s while session is "
-		    "in state %s", p, statenames[peer->state]);
-		free(p);
+		s[0] = '\0';
+		sep = "";
 	}
+	if (code)
+		logit(LOG_CRIT, "fatal in %s: %s%s%s",
+		    log_procname, s, sep, strerror(code));
+	else
+		logit(LOG_CRIT, "fatal in %s%s%s", log_procname, sep, s);
+}
+
+void
+fatal(const char *emsg, ...)
+{
+	va_list	ap;
+
+	va_start(ap, emsg);
+	vfatalc(errno, emsg, ap);
+	va_end(ap);
+	exit(1);
+}
+
+void
+fatalx(const char *emsg, ...)
+{
+	va_list	ap;
+
+	va_start(ap, emsg);
+	vfatalc(0, emsg, ap);
+	va_end(ap);
+	exit(1);
 }
