@@ -472,10 +472,15 @@ extern int optreset;
 # define SOCK_NONBLOCK O_NONBLOCK
 #endif
 
-
+#ifndef SADB_AALG_MD5HMAC
 #define SADB_AALG_MD5HMAC				2
+#endif
+#ifndef SADB_AALG_SHA1HMAC
 #define SADB_AALG_SHA1HMAC				3
+#endif
+#ifndef SADB_EALG_3DESCBC
 #define SADB_EALG_3DESCBC				3
+#endif
 #define SADB_X_FLOW_TYPE_REQUIRE		3
 #define SADB_X_SATYPE_TCPSIGNATURE		8
 #define SADB_X_EALG_AES					12

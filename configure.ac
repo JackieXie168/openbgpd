@@ -412,6 +412,29 @@ if test "x$ac_cv_have_ss_len_in_struct_ss" = "xyes" ; then
 	AC_DEFINE(HAVE_STRUCT_SOCKADDR_SS_LEN, 1, [Does struct sockaddr_storage have ss_len?])
 fi
 
+
+AC_MSG_CHECKING([whether __ss_family is defined])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <stdio.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#include <sys/types.h>
+#include <sys/socket.h>
+]], [[
+do {
+ struct sockaddr_storage a;
+ (void) a.__ss_family;
+} while(0)
+]])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(HAVE___SS_FAMILY,,[define if you have __ss_family])
+],[
+  AC_MSG_RESULT(no)
+])
+
+
+
 ##################### MODULES ##################################################
 #
 # Modules configuration
