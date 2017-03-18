@@ -15,6 +15,9 @@
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))	/* compat */
+#include "openbsd-compat.h"
+#endif /* (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) */
 
 #include <sys/types.h>
 #include <sys/param.h>

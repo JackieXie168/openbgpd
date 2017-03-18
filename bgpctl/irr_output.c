@@ -16,6 +16,11 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* for asprintf() and others */
+#ifdef __GLIBC__
+#define _GNU_SOURCE 1
+#endif
+
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
