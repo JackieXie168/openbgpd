@@ -434,6 +434,19 @@ do {
 ])
 
 
+dnl Check for inet_net_pton
+func_inet_net_pto=no
+AC_CHECK_FUNCS(inet_net_pton)
+if test "$ac_cv_func_inet_net_pton" = "yes" ; then
+	AC_MSG_CHECKING(if inet_net_pton is exists)
+	func_inet_net_pto=true
+fi
+
+AM_CONDITIONAL([HAVE_INET_NET_PTON], [test x$func_inet_net_pto = xtrue])
+AM_COND_IF([HAVE_INET_NET_PTON],
+	[AC_DEFINE([HAVE_INET_NET_PTON], [1], [Define to 1 if inet_net_pton is exists
+])])
+
 
 ##################### MODULES ##################################################
 #

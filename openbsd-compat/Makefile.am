@@ -9,3 +9,8 @@ else
 libopenbsdcompat_a_SOURCES += linkaddr.c sha512c.c getentropy_linux.c arc4random.c fgetln.c
 endif
 
+if HAVE_INET_NET_PTON
+# Do nothing
+else
+libopenbsdcompat_a_SOURCES += inet_net_pton.c
+endif

@@ -576,6 +576,10 @@ int      asprintf(char **, const char *, ...)
 int inet_pton(int, const char *, void *);
 #endif
 
+#ifndef HAVE_INET_NET_PTON
+int inet_net_pton(int af, const char *src, void *dst, size_t size);
+#endif
+
 #if !defined(HAVE_SETEUID) && defined(HAVE_SETREUID)
 int seteuid(uid_t);
 #endif /* !defined(HAVE_SETEUID) && defined(HAVE_SETREUID) */
