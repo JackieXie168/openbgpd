@@ -26,6 +26,12 @@
 # endif
 #endif
 
+#ifdef HAVE___SS_FAMILY
+# define STORAGE_FAMILY(X) (X.__ss_family)
+#else
+# define STORAGE_FAMILY(X) (X.ss_family)
+#endif
+
 #if !defined(SS_LEN)
 # if defined(HAVE_STRUCT_SOCKADDR_SS_LEN)
 #  define SS_LEN(x)  ((x)->ss_len)
@@ -35,7 +41,7 @@
 # else
 #  define SS_LEN(x)  SA_LEN((struct sockaddr *)&(x))
 #  define SET_SS_LEN(x, y) (void) 0
-#  define STORAGE_LEN(x) SA_LEN((struct sockaddr*)(x))
+#  define STORAGE_LEN(X) (STORAGE_FAMILY(X) == AF_INET ? sizeof(struct sockaddr_in) : (STORAGE_FAMILY(X) == AF_INET6 ? sizeof(struct sockaddr_in6) : SA_LEN(X)))
 #  define SET_STORAGE_LEN(X, Y) (void) 0
 # endif
 #endif

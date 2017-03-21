@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(Openbgp, 3.6, [http://www.openbsd.org/query-pr.html])
+AC_INIT(Openbgp, 6.0, [http://www.openbsd.org/query-pr.html])
 AM_INIT_AUTOMAKE(1.6)
 ## AC_CONFIG_SRCDIR([bgpctl/bgpctl.c])
 AC_CONFIG_HEADER([config.h])
@@ -411,6 +411,42 @@ AC_CACHE_CHECK([for ss_len field in struct sockaddr_storage],
 if test "x$ac_cv_have_ss_len_in_struct_ss" = "xyes" ; then
 	AC_DEFINE(HAVE_STRUCT_SOCKADDR_SS_LEN, 1, [Does struct sockaddr_storage have ss_len?])
 fi
+
+
+AC_MSG_CHECKING([whether __ss_family is defined])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <stdio.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#include <sys/types.h>
+#include <sys/socket.h>
+]], [[
+do {
+ struct sockaddr_storage a;
+ (void) a.__ss_family;
+} while(0)
+]])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(HAVE___SS_FAMILY,,[define if you have __ss_family])
+],[
+  AC_MSG_RESULT(no)
+])
+
+
+dnl Check for inet_net_pton
+func_inet_net_pto=no
+AC_CHECK_FUNCS(inet_net_pton)
+if test "$ac_cv_func_inet_net_pton" = "yes" ; then
+	AC_MSG_CHECKING(if inet_net_pton is exists)
+	func_inet_net_pto=true
+fi
+
+AM_CONDITIONAL([HAVE_INET_NET_PTON], [test x$func_inet_net_pto = xtrue])
+AM_COND_IF([HAVE_INET_NET_PTON],
+	[AC_DEFINE([HAVE_INET_NET_PTON], [1], [Define to 1 if inet_net_pton is exists
+])])
+
 
 ##################### MODULES ##################################################
 #
