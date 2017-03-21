@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(Openbgp, 3.6, [http://www.openbsd.org/query-pr.html])
+AC_INIT(Openbgp, 6.0, [http://www.openbsd.org/query-pr.html])
 AM_INIT_AUTOMAKE(1.6)
 ## AC_CONFIG_SRCDIR([bgpctl/bgpctl.c])
 AC_CONFIG_HEADER([config.h])
