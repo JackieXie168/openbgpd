@@ -1,0 +1,51 @@
+AS 7765
+router-id 199.58.81.1
+
+# which networks we announce
+# disabled because it makes it impossible for us to disable that announce
+#network 199.58.83.0/24
+
+# do update the routing tables, set to no for debugging
+fib-update yes
+
+# log changes to the BGP routing tables
+log updates
+
+# netel link
+neighbor 64.15.69.53 {
+        remote-as 10929
+        descr Netelligent
+        announce self
+        local-address 64.15.69.54
+        tcp md5sig password XXXXXXXX
+}
+
+group IBGP {
+        remote-as 7765
+        # disfavor that upstream a little
+        #set prepend-self 1
+        neighbor 199.58.81.2 {
+                descr rtr0
+        }
+}
+
+# filter rules
+
+# filter out prefixes longer than 24 or shorter than 8 bits
+deny from any
+allow from any inet prefixlen 8 - 24
+
+# do not accept a default route
+deny from any prefix 0.0.0.0/0
+
+# do not accept our own blocks
+deny from any prefix 199.58.80.0/21 prefixlen >= 21
+# ... except from a fellow, defined above
+allow from group IBGP prefix 199.58.80.0/21 prefixlen >= 21
+
+# filter bogus networks
+deny from any prefix 10.0.0.0/8 prefixlen >= 8
+deny from any prefix 172.16.0.0/12 prefixlen >= 12
+deny from any prefix { 192.168.0.0/16 169.254.0.0/16 } prefixlen >= 16
+deny from any prefix 192.0.2.0/24 prefixlen >= 24
+deny from any prefix { 224.0.0.0/4 240.0.0.0/4 } prefixlen >= 4

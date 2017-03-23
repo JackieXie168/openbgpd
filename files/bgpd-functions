@@ -1,0 +1,37 @@
+#!/bin/sh
+#bgpd-functions
+
+init_bgpd_conf()
+{
+	local acs_use_ca_pem=`nvram get acs_use_ca_pem`
+
+	if [ ! -d /var/ ]; then
+		mkdir -p /var/
+	fi;
+	echo "AS 65000" > /var/bgpd.conf
+	local_ip=`nvram get wan0_ipaddr`
+	gateway=`nvram get wan0_gateway`
+	echo "router-id $local_ip" >> /var/bgpd.conf
+	echo "neighbor $gateway{" >> /var/bgpd.conf
+	echo "		remote-as 65001" >> /var/bgpd.conf
+	echo "		announce all" >> /var/bgpd.conf
+	echo ""	>> /var/bgpd.conf
+	echo "		descr \"ebgp1\"" >> /var/bgpd.conf
+	echo "		local-address	$local_ip" >> /var/bgpd.conf
+	echo "		tcp md5sig password secret" >> /var/bgpd.conf
+	echo "" /var/bgpd.conf
+	echo "		set med 10" >> /var/bgpd.conf
+	echo "		set localpref 80" >> /var/bgpd.conf
+	echo "		set community 65000:180" >> /var/bgpd.conf
+
+	# filter out prefixes longer than 24 or shorter than 8 bits
+	echo "deny from any inet prefixlen 8 >< 24" >> /var/bgpd.conf
+	# do not accept a default route, multicast and experimental
+	echo "networks" >> /var/bgpd.conf
+	echo "deny from any prefix 0.0.0.0/0" >> /var/bgpd.conf
+	echo "deny from any prefix { 224.0.0.0/4, 240.0.0.0/4 } prefixlen >= 4" >> /var/bgpd.conf
+	# mark the prefix so that we know where we learned it from
+	echo "match from any set community 65001:neighbor-as" >> /var/bgpd.conf
+}
+
+

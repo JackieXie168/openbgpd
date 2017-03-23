@@ -779,7 +779,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 				printf("  Last error: %s\n\n", errstr);
 		} else {
 			if (getnameinfo((struct sockaddr *)&p->sa_local,
-			    STORAGE_LEN((socklen_t)p->sa_local),
+			    SS_LEN1((socklen_t)p->sa_local),
 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
 				strlcpy(buf, "(unknown)", sizeof(buf));
@@ -789,7 +789,7 @@ show_neighbor_msg(struct imsg *imsg, enum neighbor_views nv)
 			    pbuf);
 
 			if (getnameinfo((struct sockaddr *)&p->sa_remote,
-			    STORAGE_LEN((socklen_t)p->sa_remote),
+			    SS_LEN1((socklen_t)p->sa_remote),
 			    buf, sizeof(buf), pbuf, sizeof(pbuf),
 			    NI_NUMERICHOST | NI_NUMERICSERV)) {
 				strlcpy(buf, "(unknown)", sizeof(buf));

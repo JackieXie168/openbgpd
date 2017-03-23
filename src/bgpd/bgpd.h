@@ -76,6 +76,10 @@
 
 #define	BGP_VERSION			4
 #define	BGP_PORT			179
+#ifdef OPENWRT
+#define	CONFFILE			"/var/bgpd.conf"
+#define	BGPD_USER			"root"
+#endif
 #define	CONFFILE			"/etc/bgpd.conf"
 #define	BGPD_USER			"_bgpd"
 #define	PEER_DESCR_LEN			32

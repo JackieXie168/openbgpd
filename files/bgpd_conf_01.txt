@@ -1,0 +1,27 @@
+# This file was created by the package manager.  Do not edit!
+
+AS ABCD
+fib-update yes
+network aa.bb.125.0/24
+group "Telus" {
+	remote-as XXX
+		neighbor xx.xx.241.3 {
+    	 descr "Telus BGP"
+		tcp md5sig password xxxxx
+		announce all  
+}
+}
+group "Shaw" {
+	remote-as YYY
+		neighbor yy.yy.127.249 {
+    	 descr "Shaw BGP"
+		tcp md5sig password xxxxx
+		announce all  
+}
+}
+deny from any
+deny to any
+allow from xx.xx.241.3
+allow to xx.xx.241.3
+allow from yy.yy.127.249
+allow to yy.yy.127.249

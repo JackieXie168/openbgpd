@@ -1,0 +1,102 @@
+#!/bin/sh
+# init file for bgp daemon
+#
+# chkconfig: - 50 50
+# description: BGP Daemon
+#
+# processname: /usr/sbin/bgpd
+# config: 	/var/bgpd.conf
+# pidfile:	/var/run/bgpd.pid
+
+# source function library
+. /etc/rc.d/bgpd-functions
+
+PID_FILE="/var/run/bgpd.pid"
+CFG_FILE="/var/bgpd.conf"
+OPTIONS="-f $CFG_FILE"
+RETVAL=0
+prog="bgpd"
+
+start() {
+        # Start BGP daemons.
+        local bgpd_enable=`nvram get bgpd_enable`
+        # reconstruct config file 
+        rm -rf /var/bgpd.conf
+        echo -n $"Starting $prog: "
+        if [ "$bgpd_enable" = "1" ]; then        	
+		[ ! -e /var/bgpd.conf ] && init_bgpd_conf
+		${prog} $OPTIONS
+		RETVAL=$?
+        fi;
+        echo
+        touch $PID_FILE
+        #ps | grep $prog | awk -F" " '{print $1}' >> $PID_FILE
+        return $RETVAL
+}
+
+stop() {
+	echo -n $"Stopping $prog: "
+	if [ -e ${PID_FILE} ]; then
+		kill `cat ${PID_FILE}`
+		rm -f ${PID_FILE}
+	fi
+	killall -9 ${prog}
+	nvram set agent_is_started=0
+	RETVAL=$?
+	echo
+	return $RETVAL
+}
+
+reload(){
+        echo -n $"Reloading $prog: "
+        killproc /usr/sbin/bgpd -HUP
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+
+restart(){
+        stop
+        start
+}
+
+condrestart(){
+    [ -e /var/lock/subsys/bgpd ] && restart
+    return 0
+}
+
+pidfile() {
+	pid_num=`ps | grep ${prog} | grep -v grep | head -n 1 | awk '{print $1}'`
+	echo "$pid_num" > ${PID_FILE}
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  reload)
+        reload
+        ;;
+  condrestart)
+        condrestart
+        ;;
+  status)
+        status agent
+        RETVAL=$?
+	 ;;
+  pidfile)
+	 pidfile
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload|pidfile}"
+        RETVAL=1
+esac
+
+exit $RETVAL
+
